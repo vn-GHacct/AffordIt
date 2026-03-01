@@ -25,19 +25,24 @@ export default function VerdictBanner({ emoji, verdict, color }) {
 
 const styles = StyleSheet.create({
   banner: {
-    borderRadius: 20,
-    paddingVertical: 36,
-    paddingHorizontal: 24,
+    borderRadius: 24,
+    paddingVertical: 44,
+    paddingHorizontal: 28,
     alignItems: 'center',
     marginBottom: 28,
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 5,
   },
   emoji: {
-    fontSize: 52,
-    marginBottom: 12,
+    fontSize: 56,
+    marginBottom: 14,
   },
   verdictText: {
-    fontSize: 26,
-    fontWeight: '700',
+    fontSize: 28,
+    fontWeight: '800',
     color: '#fff',
     textAlign: 'center',
     letterSpacing: -0.5,
