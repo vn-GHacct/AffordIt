@@ -21,7 +21,8 @@ import { incrementUsageCount } from '../utils/storage';
 import { fetchPriceFromUrl } from '../utils/urlLookup';
 import { CURRENCIES, DEFAULT_CURRENCY } from '../utils/currencies';
 import PressableScale from '../components/PressableScale';
-import { colors, fonts, spacing, radii, typography } from '../theme';
+import HistoryPanel from '../components/HistoryPanel';
+import { colors, fonts, spacing, radii } from '../theme';
 
 const MAX_PRODUCTS = 5;
 
@@ -53,6 +54,7 @@ export default function HomeScreen({ navigation }) {
   const [incomeFocused, setIncomeFocused] = useState(false);
   const [urlFocused, setUrlFocused] = useState(false);
   const [showCurrencyModal, setShowCurrencyModal] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
 
   const addProduct = () => {
     if (products.length >= MAX_PRODUCTS) return;
@@ -267,11 +269,13 @@ export default function HomeScreen({ navigation }) {
           <PressableScale onPress={handleCheck} style={styles.cta}>
             <Text style={styles.ctaText}>Check It</Text>
           </PressableScale>
-          <TouchableOpacity onPress={() => navigation.navigate('Saved')}>
+          <TouchableOpacity onPress={() => setShowHistory(true)}>
             <Text style={styles.savedLink}>View saved checks</Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+
+      <HistoryPanel visible={showHistory} onClose={() => setShowHistory(false)} />
 
       {/* Currency bottom sheet */}
       <Modal

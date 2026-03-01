@@ -16,6 +16,7 @@ import {
   Animated,
 } from 'react-native';
 import PaywallModal from '../components/PaywallModal';
+import HistoryPanel from '../components/HistoryPanel';
 import PressableScale from '../components/PressableScale';
 import { saveCalculation } from '../utils/storage';
 import { formatCurrency, formatPercent } from '../utils/calculations';
@@ -27,6 +28,7 @@ export default function ResultScreen({ route, navigation }) {
 
   const [savedIds, setSavedIds] = useState(new Set());
   const [showPaywall, setShowPaywall] = useState(usageCount > 3);
+  const [showHistory, setShowHistory] = useState(false);
 
   const isSingle = results.length === 1;
 
@@ -81,10 +83,15 @@ export default function ResultScreen({ route, navigation }) {
       <SafeAreaView style={styles.safe}>
         <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
 
-          {/* Back */}
-          <TouchableOpacity style={styles.back} onPress={() => navigation.navigate('Home')}>
-            <Text style={styles.backText}>← Back</Text>
-          </TouchableOpacity>
+          {/* Nav row */}
+          <View style={styles.navRow}>
+            <TouchableOpacity onPress={() => navigation.navigate('Home')}>
+              <Text style={styles.backText}>← Back</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setShowHistory(true)}>
+              <Text style={styles.historyText}>History</Text>
+            </TouchableOpacity>
+          </View>
 
           {/* Verdict hero */}
           <Animated.View style={[styles.hero, { opacity: heroAnim }]}>
@@ -166,6 +173,7 @@ export default function ResultScreen({ route, navigation }) {
 
         </ScrollView>
         <PaywallModal visible={showPaywall} onDismiss={() => setShowPaywall(false)} />
+        <HistoryPanel visible={showHistory} onClose={() => setShowHistory(false)} />
       </SafeAreaView>
     );
   }
@@ -179,9 +187,14 @@ export default function ResultScreen({ route, navigation }) {
 
         {/* Header */}
         <View style={styles.multiHeader}>
-          <TouchableOpacity onPress={() => navigation.navigate('Home')} style={styles.back}>
-            <Text style={styles.backText}>← Back</Text>
-          </TouchableOpacity>
+          <View style={styles.navRow}>
+            <TouchableOpacity onPress={() => navigation.navigate('Home')}>
+              <Text style={styles.backText}>← Back</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setShowHistory(true)}>
+              <Text style={styles.historyText}>History</Text>
+            </TouchableOpacity>
+          </View>
           <Text style={styles.multiTitle}>{results.length} products compared</Text>
           <Text style={styles.multiSubtitle}>
             {formatCurrency(monthlyIncome, currency)}/mo income
@@ -243,6 +256,7 @@ export default function ResultScreen({ route, navigation }) {
 
       </ScrollView>
       <PaywallModal visible={showPaywall} onDismiss={() => setShowPaywall(false)} />
+      <HistoryPanel visible={showHistory} onClose={() => setShowHistory(false)} />
     </SafeAreaView>
   );
 }
@@ -257,8 +271,16 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg,
   },
 
-  back: { paddingHorizontal: spacing.lg, paddingTop: spacing.lg, paddingBottom: spacing.sm },
+  navRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.sm,
+  },
   backText: { fontFamily: fonts.medium, fontSize: 14, color: colors.textMuted },
+  historyText: { fontFamily: fonts.medium, fontSize: 14, color: colors.teal },
 
   // Hero
   hero: {
