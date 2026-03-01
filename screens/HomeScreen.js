@@ -310,15 +310,17 @@ export default function HomeScreen({ navigation }) {
           </PressableScale>
 
           {!!error && <Text style={styles.error}>{error}</Text>}
+        </ScrollView>
 
+        {/* Sticky footer — always visible, clearly separate from the URL section */}
+        <View style={styles.footer}>
           <PressableScale onPress={handleCheck} style={styles.button}>
             <Text style={styles.buttonText}>Check It</Text>
           </PressableScale>
-
           <TouchableOpacity onPress={() => navigation.navigate('Saved')}>
             <Text style={styles.savedLink}>View saved checks</Text>
           </TouchableOpacity>
-        </ScrollView>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -330,7 +332,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: 24,
     paddingTop: 48,
-    paddingBottom: 48,
+    paddingBottom: 24,
     backgroundColor: colors.bg,
   },
   pillWrap: { alignItems: 'center', marginBottom: spacing.lg },
@@ -467,14 +469,22 @@ const styles = StyleSheet.create({
   fetchButtonText: { color: colors.teal, fontSize: 15, fontWeight: '600', letterSpacing: 0.2 },
   priceConfirmation: { color: colors.success, fontSize: 13, marginTop: 8, marginLeft: 4, fontWeight: '600' },
   error: { color: colors.danger, fontSize: 13, marginTop: 10, marginLeft: 4 },
+  // Sticky footer
+  footer: {
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    paddingBottom: 8,
+    backgroundColor: colors.bg,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
   // CTA
   button: {
     backgroundColor: colors.teal,
     borderRadius: radii.md,
     paddingVertical: 18,
     alignItems: 'center',
-    marginTop: spacing.xl,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.sm,
     height: 56,
     justifyContent: 'center',
   },
