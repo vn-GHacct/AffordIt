@@ -1,13 +1,9 @@
 /**
  * HomeScreen.js
  *
- * The first screen users see when they open the app.
- * They enter their monthly income and the purchase they're considering,
- * then tap "Check It" to get a verdict.
- *
- * This screen does NOT contain any verdict logic — it just collects
- * input, calls getVerdict() from utils/calculations.js, and passes
- * the result to ResultScreen via navigation params.
+ * The first screen users see. Collects income and one or more purchase amounts,
+ * then navigates to ResultScreen with an array of verdict results.
+ * Up to 5 products can be compared in one check.
  */
 
 import React, { useState } from 'react';
@@ -25,21 +21,20 @@ import {
 } from 'react-native';
 import { getVerdict } from '../utils/calculations';
 import { incrementUsageCount } from '../utils/storage';
-import { fetchPriceFromUrl, SUPPORTED_SITES } from '../utils/urlLookup';
+import { fetchPriceFromUrl } from '../utils/urlLookup';
 import { CURRENCIES, DEFAULT_CURRENCY } from '../utils/currencies';
 import PressableScale from '../components/PressableScale';
 import { colors, spacing, radii, typography } from '../theme';
 
+const MAX_PRODUCTS = 5;
+
 /**
  * Formats a raw numeric string with thousand-separator commas.
- * Preserves a trailing decimal point and up to the digits already typed after it.
  * e.g. "4500" → "4,500"   "1234.5" → "1,234.5"
  */
 function formatInputValue(text) {
-  // Allow only digits and a single decimal point
   const cleaned = text.replace(/[^0-9.]/g, '');
   const dotIndex = cleaned.indexOf('.');
-  // If there are multiple dots, keep only everything up to the second one
   const safe =
     dotIndex === -1
       ? cleaned
@@ -49,29 +44,46 @@ function formatInputValue(text) {
   return rest.length ? `${withCommas}.${rest.join('')}` : withCommas;
 }
 
+function makeProduct() {
+  return { id: String(Date.now()) + String(Math.random()), amount: '', isMonthlyPayment: false, focused: false };
+}
+
 export default function HomeScreen({ navigation }) {
   // --- State ---
   const [income, setIncome] = useState('');
-  const [amount, setAmount] = useState('');
-  const [isMonthlyPayment, setIsMonthlyPayment] = useState(false);
   const [isAnnualIncome, setIsAnnualIncome] = useState(false);
+  const [products, setProducts] = useState([makeProduct()]);
   const [error, setError] = useState('');
   const [productUrl, setProductUrl] = useState('');
   const [isFetching, setIsFetching] = useState(false);
   const [priceConfirmation, setPriceConfirmation] = useState('');
   const [currency, setCurrency] = useState(DEFAULT_CURRENCY);
   const [incomeFocused, setIncomeFocused] = useState(false);
-  const [amountFocused, setAmountFocused] = useState(false);
   const [urlFocused, setUrlFocused] = useState(false);
 
-  // --- Handlers ---
+  // --- Product list handlers ---
+  const addProduct = () => {
+    if (products.length >= MAX_PRODUCTS) return;
+    setProducts(prev => [...prev, makeProduct()]);
+  };
+
+  const removeProduct = (id) => {
+    setProducts(prev => prev.filter(p => p.id !== id));
+  };
+
+  const updateProduct = (id, key, value) => {
+    setProducts(prev => prev.map(p => p.id === id ? { ...p, [key]: value } : p));
+  };
+
+  // --- URL fetcher ---
   const handleFetchPrice = async () => {
     setError('');
     setPriceConfirmation('');
     setIsFetching(true);
     try {
       const { price, productName, site } = await fetchPriceFromUrl(productUrl.trim());
-      setAmount(formatInputValue(price.toFixed(currency.decimals)));
+      // Fill into the first product's amount
+      updateProduct(products[0].id, 'amount', formatInputValue(price.toFixed(currency.decimals)));
       const label = productName
         ? `Found on ${site}: ${currency.symbol}${price.toFixed(currency.decimals)} — ${productName}`
         : `Found on ${site}: ${currency.symbol}${price.toFixed(currency.decimals)}`;
@@ -84,41 +96,37 @@ export default function HomeScreen({ navigation }) {
     }
   };
 
+  // --- Check handler ---
   const handleCheck = async () => {
     setError('');
 
-    // Strip commas so "4,500" parses correctly
     const rawIncome = parseFloat(income.replace(/,/g, ''));
-    const purchaseAmount = parseFloat(amount.replace(/,/g, ''));
-
-    // Convert annual → monthly if needed
     const monthlyIncome = isAnnualIncome ? rawIncome / 12 : rawIncome;
 
-    // Validate inputs before running the calculation
     if (!rawIncome || rawIncome <= 0) {
       setError(`Please enter your ${isAnnualIncome ? 'annual' : 'monthly'} take-home income.`);
       return;
     }
-    if (!purchaseAmount || purchaseAmount <= 0) {
-      setError('Please enter the purchase amount.');
-      return;
+
+    const results = [];
+    for (let i = 0; i < products.length; i++) {
+      const p = products[i];
+      const purchaseAmount = parseFloat(p.amount.replace(/,/g, ''));
+      if (!purchaseAmount || purchaseAmount <= 0) {
+        setError(
+          products.length > 1
+            ? `Enter an amount for product ${i + 1}.`
+            : 'Please enter the purchase amount.'
+        );
+        return;
+      }
+      const result = getVerdict(monthlyIncome, purchaseAmount, p.isMonthlyPayment);
+      results.push({ ...result, purchaseAmount, isMonthlyPayment: p.isMonthlyPayment });
     }
 
-    // Run the verdict logic (all math stays in calculations.js)
-    const result = getVerdict(monthlyIncome, purchaseAmount, isMonthlyPayment);
-
-    // Track usage for the freemium gate
     const usageCount = await incrementUsageCount();
 
-    // Navigate to ResultScreen, passing everything it needs to display
-    navigation.navigate('Result', {
-      ...result,
-      monthlyIncome,
-      purchaseAmount,
-      isMonthlyPayment,
-      usageCount,
-      currency,
-    });
+    navigation.navigate('Result', { results, monthlyIncome, usageCount, currency });
   };
 
   // --- Render ---
@@ -132,20 +140,19 @@ export default function HomeScreen({ navigation }) {
           contentContainerStyle={styles.container}
           keyboardShouldPersistTaps="handled"
         >
-          {/* App pill label */}
+          {/* Pill label */}
           <View style={styles.pillWrap}>
             <View style={styles.pill}>
               <Text style={styles.pillText}>AFFORD IT</Text>
             </View>
           </View>
 
-          {/* Hero heading */}
           <Text style={styles.hero}>Can you{'\n'}afford it?</Text>
           <Text style={styles.subtext}>
             30-second gut check before any big purchase
           </Text>
 
-          {/* --- Currency picker --- */}
+          {/* Currency picker */}
           <Text style={styles.label}>Currency</Text>
           <ScrollView
             horizontal
@@ -156,25 +163,17 @@ export default function HomeScreen({ navigation }) {
             {CURRENCIES.map((c) => (
               <TouchableOpacity
                 key={c.code}
-                style={[
-                  styles.currencyPill,
-                  currency.code === c.code && styles.currencyPillActive,
-                ]}
+                style={[styles.currencyPill, currency.code === c.code && styles.currencyPillActive]}
                 onPress={() => setCurrency(c)}
               >
-                <Text
-                  style={[
-                    styles.currencyPillText,
-                    currency.code === c.code && styles.currencyPillTextActive,
-                  ]}
-                >
+                <Text style={[styles.currencyPillText, currency.code === c.code && styles.currencyPillTextActive]}>
                   {c.symbol} {c.code}
                 </Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
 
-          {/* --- Income input card --- */}
+          {/* Income input */}
           <View style={styles.labelRow}>
             <Text style={styles.label}>Take-home income</Text>
             <View style={styles.incomePeriodToggle}>
@@ -182,17 +181,13 @@ export default function HomeScreen({ navigation }) {
                 style={[styles.periodOption, !isAnnualIncome && styles.periodOptionActive]}
                 onPress={() => setIsAnnualIncome(false)}
               >
-                <Text style={[styles.periodText, !isAnnualIncome && styles.periodTextActive]}>
-                  Monthly
-                </Text>
+                <Text style={[styles.periodText, !isAnnualIncome && styles.periodTextActive]}>Monthly</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.periodOption, isAnnualIncome && styles.periodOptionActive]}
                 onPress={() => setIsAnnualIncome(true)}
               >
-                <Text style={[styles.periodText, isAnnualIncome && styles.periodTextActive]}>
-                  Annual
-                </Text>
+                <Text style={[styles.periodText, isAnnualIncome && styles.periodTextActive]}>Annual</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -211,55 +206,73 @@ export default function HomeScreen({ navigation }) {
             />
           </View>
 
-          {/* --- Toggle: Lump sum vs. Monthly payment --- */}
+          {/* Products */}
           <Text style={styles.label}>What are you pricing out?</Text>
-          <View style={styles.toggle}>
-            <TouchableOpacity
-              style={[styles.toggleOption, !isMonthlyPayment && styles.toggleActive]}
-              onPress={() => setIsMonthlyPayment(false)}
-            >
-              <Text style={[styles.toggleText, !isMonthlyPayment && styles.toggleTextActive]}>
-                Lump sum price
-              </Text>
+
+          {products.map((product, index) => (
+            <View key={product.id} style={styles.productEntry}>
+              {products.length > 1 && (
+                <View style={styles.productHeader}>
+                  <Text style={styles.productNumber}>Product {index + 1}</Text>
+                  <TouchableOpacity
+                    onPress={() => removeProduct(product.id)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Text style={styles.removeText}>✕ Remove</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              <View style={[styles.inputCard, product.focused && styles.inputCardFocused]}>
+                <Text style={styles.prefix}>{currency.symbol}</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder={product.isMonthlyPayment ? 'Monthly payment (e.g. 350)' : 'Purchase price (e.g. 1,200)'}
+                  placeholderTextColor={colors.textMuted}
+                  keyboardType="numeric"
+                  value={product.amount}
+                  onChangeText={(text) => updateProduct(product.id, 'amount', formatInputValue(text))}
+                  returnKeyType="done"
+                  onSubmitEditing={handleCheck}
+                  onFocus={() => updateProduct(product.id, 'focused', true)}
+                  onBlur={() => updateProduct(product.id, 'focused', false)}
+                />
+              </View>
+
+              <View style={styles.toggle}>
+                <TouchableOpacity
+                  style={[styles.toggleOption, !product.isMonthlyPayment && styles.toggleActive]}
+                  onPress={() => updateProduct(product.id, 'isMonthlyPayment', false)}
+                >
+                  <Text style={[styles.toggleText, !product.isMonthlyPayment && styles.toggleTextActive]}>
+                    Lump sum
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.toggleOption, product.isMonthlyPayment && styles.toggleActive]}
+                  onPress={() => updateProduct(product.id, 'isMonthlyPayment', true)}
+                >
+                  <Text style={[styles.toggleText, product.isMonthlyPayment && styles.toggleTextActive]}>
+                    Monthly
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))}
+
+          {products.length < MAX_PRODUCTS && (
+            <TouchableOpacity style={styles.addProductButton} onPress={addProduct}>
+              <Text style={styles.addProductText}>+ Compare another product</Text>
             </TouchableOpacity>
+          )}
 
-            <TouchableOpacity
-              style={[styles.toggleOption, isMonthlyPayment && styles.toggleActive]}
-              onPress={() => setIsMonthlyPayment(true)}
-            >
-              <Text style={[styles.toggleText, isMonthlyPayment && styles.toggleTextActive]}>
-                Monthly payment
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* --- Amount input card --- */}
-          <View style={[styles.inputCard, amountFocused && styles.inputCardFocused]}>
-            <Text style={styles.prefix}>{currency.symbol}</Text>
-            <TextInput
-              style={styles.input}
-              placeholder={
-                isMonthlyPayment ? 'Monthly payment (e.g. 350)' : 'Purchase price (e.g. 1,200)'
-              }
-              placeholderTextColor={colors.textMuted}
-              keyboardType="numeric"
-              value={amount}
-              onChangeText={(text) => setAmount(formatInputValue(text))}
-              returnKeyType="done"
-              onSubmitEditing={handleCheck}
-              onFocus={() => setAmountFocused(true)}
-              onBlur={() => setAmountFocused(false)}
-            />
-          </View>
-
-          {/* --- "or" divider --- */}
+          {/* URL fetcher */}
           <View style={styles.divider}>
             <View style={styles.dividerLine} />
             <Text style={styles.dividerText}>or paste a product URL</Text>
             <View style={styles.dividerLine} />
           </View>
 
-          {/* --- URL price fetcher --- */}
           <View style={[styles.inputCard, urlFocused && styles.inputCardFocused]}>
             <TextInput
               style={[styles.input, { flex: 1 }]}
@@ -296,15 +309,12 @@ export default function HomeScreen({ navigation }) {
             )}
           </PressableScale>
 
-          {/* Inline error message */}
           {!!error && <Text style={styles.error}>{error}</Text>}
 
-          {/* --- Primary CTA --- */}
           <PressableScale onPress={handleCheck} style={styles.button}>
             <Text style={styles.buttonText}>Check It</Text>
           </PressableScale>
 
-          {/* --- Link to saved calculations --- */}
           <TouchableOpacity onPress={() => navigation.navigate('Saved')}>
             <Text style={styles.savedLink}>View saved checks</Text>
           </TouchableOpacity>
@@ -315,10 +325,7 @@ export default function HomeScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: colors.bg,
-  },
+  safe: { flex: 1, backgroundColor: colors.bg },
   container: {
     flexGrow: 1,
     paddingHorizontal: 24,
@@ -326,10 +333,7 @@ const styles = StyleSheet.create({
     paddingBottom: 48,
     backgroundColor: colors.bg,
   },
-  pillWrap: {
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
+  pillWrap: { alignItems: 'center', marginBottom: spacing.lg },
   pill: {
     backgroundColor: colors.tealDim,
     borderRadius: radii.pill,
@@ -338,18 +342,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.teal + '55',
   },
-  pillText: {
-    color: colors.teal,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 2,
-  },
-  hero: {
-    ...typography.hero,
-    color: colors.textPrimary,
-    textAlign: 'center',
-    marginBottom: spacing.md,
-  },
+  pillText: { color: colors.teal, fontSize: 11, fontWeight: '700', letterSpacing: 2 },
+  hero: { ...typography.hero, color: colors.textPrimary, textAlign: 'center', marginBottom: spacing.md },
   subtext: {
     fontSize: 15,
     color: colors.textSecondary,
@@ -363,7 +357,18 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     marginTop: spacing.lg,
   },
-  // Row that holds the label + the monthly/annual mini-toggle
+  currencyRow: { flexDirection: 'row', gap: 8, paddingBottom: 4 },
+  currencyPill: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  currencyPillActive: { backgroundColor: colors.teal, borderColor: colors.teal },
+  currencyPillText: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
+  currencyPillTextActive: { color: '#0F0F0F' },
   labelRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -379,49 +384,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  periodOption: {
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: radii.pill,
-  },
-  periodOptionActive: {
-    backgroundColor: colors.teal,
-  },
-  periodText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textMuted,
-  },
-  periodTextActive: {
-    color: '#0F0F0F',
-  },
-  // Currency picker row
-  currencyRow: {
-    flexDirection: 'row',
-    gap: 8,
-    paddingBottom: 4,
-  },
-  currencyPill: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  currencyPillActive: {
-    backgroundColor: colors.teal,
-    borderColor: colors.teal,
-  },
-  currencyPillText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
-  currencyPillTextActive: {
-    color: '#0F0F0F',
-  },
-  // Input cards
+  periodOption: { paddingVertical: 4, paddingHorizontal: 10, borderRadius: radii.pill },
+  periodOptionActive: { backgroundColor: colors.teal },
+  periodText: { fontSize: 12, fontWeight: '600', color: colors.textMuted },
+  periodTextActive: { color: '#0F0F0F' },
   inputCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -432,29 +398,31 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     paddingHorizontal: 16,
   },
-  inputCardFocused: {
-    borderColor: colors.teal,
+  inputCardFocused: { borderColor: colors.teal },
+  prefix: { fontSize: 22, color: colors.textMuted, marginRight: 8, fontWeight: '500' },
+  input: { flex: 1, fontSize: 22, color: colors.textPrimary, paddingVertical: 16, fontWeight: '500' },
+  // Product entries
+  productEntry: { marginBottom: spacing.sm },
+  productHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
   },
-  prefix: {
-    fontSize: 22,
+  productNumber: {
+    fontSize: 12,
+    fontWeight: '700',
     color: colors.textMuted,
-    marginRight: 8,
-    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
   },
-  input: {
-    flex: 1,
-    fontSize: 22,
-    color: colors.textPrimary,
-    paddingVertical: 16,
-    fontWeight: '500',
-  },
-  // Pill toggle
+  removeText: { fontSize: 12, color: colors.danger, fontWeight: '600' },
   toggle: {
     flexDirection: 'row',
     backgroundColor: colors.surface,
     borderRadius: radii.md,
     padding: 4,
-    marginBottom: 4,
+    marginTop: 8,
     borderWidth: 1,
     borderColor: colors.border,
   },
@@ -464,18 +432,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: radii.sm + 2,
   },
-  toggleActive: {
-    backgroundColor: colors.teal,
+  toggleActive: { backgroundColor: colors.teal },
+  toggleText: { fontSize: 14, color: colors.textMuted, fontWeight: '500' },
+  toggleTextActive: { color: '#0F0F0F', fontWeight: '700' },
+  // Add product
+  addProductButton: {
+    marginTop: spacing.md,
+    paddingVertical: 14,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.teal + '66',
+    alignItems: 'center',
   },
-  toggleText: {
-    fontSize: 14,
-    color: colors.textMuted,
-    fontWeight: '500',
-  },
-  toggleTextActive: {
-    color: '#0F0F0F',
-    fontWeight: '700',
-  },
+  addProductText: { color: colors.teal, fontSize: 14, fontWeight: '600' },
   // Divider
   divider: {
     flexDirection: 'row',
@@ -483,18 +452,9 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl,
     marginBottom: spacing.sm,
   },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: colors.border,
-  },
-  dividerText: {
-    marginHorizontal: 12,
-    fontSize: 12,
-    color: colors.textMuted,
-    fontWeight: '500',
-  },
-  // Fetch button
+  dividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
+  dividerText: { marginHorizontal: 12, fontSize: 12, color: colors.textMuted, fontWeight: '500' },
+  // Fetch
   fetchButton: {
     borderRadius: radii.md,
     paddingVertical: 15,
@@ -503,29 +463,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.teal,
   },
-  fetchButtonDisabled: {
-    borderColor: colors.border,
-  },
-  fetchButtonText: {
-    color: colors.teal,
-    fontSize: 15,
-    fontWeight: '600',
-    letterSpacing: 0.2,
-  },
-  priceConfirmation: {
-    color: colors.success,
-    fontSize: 13,
-    marginTop: 8,
-    marginLeft: 4,
-    fontWeight: '600',
-  },
-  error: {
-    color: colors.danger,
-    fontSize: 13,
-    marginTop: 10,
-    marginLeft: 4,
-  },
-  // Primary CTA
+  fetchButtonDisabled: { borderColor: colors.border },
+  fetchButtonText: { color: colors.teal, fontSize: 15, fontWeight: '600', letterSpacing: 0.2 },
+  priceConfirmation: { color: colors.success, fontSize: 13, marginTop: 8, marginLeft: 4, fontWeight: '600' },
+  error: { color: colors.danger, fontSize: 13, marginTop: 10, marginLeft: 4 },
+  // CTA
   button: {
     backgroundColor: colors.teal,
     borderRadius: radii.md,
@@ -536,12 +478,7 @@ const styles = StyleSheet.create({
     height: 56,
     justifyContent: 'center',
   },
-  buttonText: {
-    color: '#0F0F0F',
-    fontSize: 17,
-    fontWeight: '700',
-    letterSpacing: 0.2,
-  },
+  buttonText: { color: '#0F0F0F', fontSize: 17, fontWeight: '700', letterSpacing: 0.2 },
   savedLink: {
     textAlign: 'center',
     color: colors.textMuted,

@@ -1,13 +1,12 @@
 /**
  * ResultScreen.js
  *
- * Displays the verdict after the user taps "Check It" on HomeScreen.
- * All data arrives via route.params — this screen only renders, it
- * doesn't recalculate anything.
+ * Displays verdict(s) after the user taps "Check It" on HomeScreen.
+ * Receives a `results` array — one item for a single check, up to 5 for
+ * a multi-product comparison.
  *
- * Also manages:
- *  - Saving a calculation to AsyncStorage
- *  - Showing the PaywallModal if the user has exceeded 3 free calculations
+ * Single product  → Full-screen layout with VerdictBanner + stat cards + quote block
+ * Multiple products → Stacked compact verdict cards, one per product
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -28,130 +27,200 @@ import { DEFAULT_CURRENCY } from '../utils/currencies';
 import { colors, spacing, radii, typography } from '../theme';
 
 export default function ResultScreen({ route, navigation }) {
-  // Everything we need was passed in from HomeScreen
-  const {
-    verdict,
-    color,
-    emoji,
-    monthlyCost,
-    impactRatio,
-    displacementText,
-    monthlyIncome,
-    purchaseAmount,
-    isMonthlyPayment,
-    usageCount,
-    currency = DEFAULT_CURRENCY,
-  } = route.params;
+  const { results, monthlyIncome, usageCount, currency = DEFAULT_CURRENCY } = route.params;
 
-  const [saved, setSaved] = useState(false);
-
-  // Show the paywall if this was their 4th+ calculation (usageCount > 3)
+  const [savedIds, setSavedIds] = useState(new Set());
   const [showPaywall, setShowPaywall] = useState(usageCount > 3);
 
-  // Stagger animation values for stat1 → stat2 → displacement → buttons
-  const stat1Opacity = useRef(new Animated.Value(0)).current;
-  const stat2Opacity = useRef(new Animated.Value(0)).current;
-  const displacementOpacity = useRef(new Animated.Value(0)).current;
-  const buttonsOpacity = useRef(new Animated.Value(0)).current;
+  const isSingle = results.length === 1;
+
+  // Single-product animations (4-step stagger matching original design)
+  const stat1Anim = useRef(new Animated.Value(0)).current;
+  const stat2Anim = useRef(new Animated.Value(0)).current;
+  const displacementAnim = useRef(new Animated.Value(0)).current;
+  const buttonsAnim = useRef(new Animated.Value(0)).current;
+
+  // Multi-product animations (one per card)
+  const cardAnims = useRef(results.map(() => new Animated.Value(0))).current;
 
   useEffect(() => {
-    Animated.stagger(150, [
-      Animated.timing(stat1Opacity, { toValue: 1, duration: 300, useNativeDriver: true }),
-      Animated.timing(stat2Opacity, { toValue: 1, duration: 300, useNativeDriver: true }),
-      Animated.timing(displacementOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
-      Animated.timing(buttonsOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
-    ]).start();
+    if (isSingle) {
+      Animated.stagger(150, [
+        Animated.timing(stat1Anim, { toValue: 1, duration: 300, useNativeDriver: true }),
+        Animated.timing(stat2Anim, { toValue: 1, duration: 300, useNativeDriver: true }),
+        Animated.timing(displacementAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+        Animated.timing(buttonsAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+      ]).start();
+    } else {
+      Animated.stagger(100,
+        cardAnims.map(anim =>
+          Animated.timing(anim, { toValue: 1, duration: 300, useNativeDriver: true })
+        )
+      ).start();
+    }
   }, []);
 
-  const handleSave = async () => {
-    // Build a human-readable label for the saved card
-    const label = `${isMonthlyPayment ? 'Payment of' : 'Purchase of'} $${Number(
-      purchaseAmount
-    ).toLocaleString()}`;
-
+  const handleSave = async (result, index) => {
+    const label = `${result.isMonthlyPayment ? 'Payment of' : 'Purchase of'} ${currency.symbol}${Number(result.purchaseAmount).toLocaleString()}`;
     await saveCalculation({
-      verdict,
-      color,
-      emoji,
-      monthlyCost,
-      impactRatio,
+      verdict: result.verdict,
+      color: result.color,
+      emoji: result.emoji,
+      monthlyCost: result.monthlyCost,
+      impactRatio: result.impactRatio,
       label,
       currency,
     });
-
-    setSaved(true);
+    setSavedIds(prev => new Set([...prev, index]));
   };
 
+  // -------------------------------------------------------------------------
+  // Single-product layout — identical to the original design
+  // -------------------------------------------------------------------------
+  if (isSingle) {
+    const result = results[0];
+    return (
+      <SafeAreaView style={styles.safe}>
+        <ScrollView contentContainerStyle={styles.container}>
+          <VerdictBanner emoji={result.emoji} verdict={result.verdict} color={result.color} />
+
+          <View style={styles.statsRow}>
+            <Animated.View style={[styles.statCard, { opacity: stat1Anim }]}>
+              <Text style={styles.statLabel}>Monthly cost</Text>
+              <Text style={styles.statValue}>{formatCurrency(result.monthlyCost, currency)}</Text>
+            </Animated.View>
+            <Animated.View style={[styles.statCard, { opacity: stat2Anim }]}>
+              <Text style={styles.statLabel}>% of income</Text>
+              <Text style={[styles.statValue, { color: result.color }]}>
+                {formatPercent(result.impactRatio)}
+              </Text>
+            </Animated.View>
+          </View>
+
+          <Animated.View style={[styles.quoteBlock, { opacity: displacementAnim }]}>
+            <View style={[styles.quoteBorder, { backgroundColor: colors.teal }]} />
+            <Text style={styles.quoteText}>{result.displacementText}</Text>
+          </Animated.View>
+
+          <Animated.View style={[styles.buttonGroup, { opacity: buttonsAnim }]}>
+            <PressableScale
+              style={[styles.saveButton, savedIds.has(0) && styles.saveButtonSaved]}
+              onPress={() => handleSave(result, 0)}
+              disabled={savedIds.has(0)}
+            >
+              <Text style={[styles.saveButtonText, savedIds.has(0) && styles.saveButtonTextSaved]}>
+                {savedIds.has(0) ? 'Saved ✓' : 'Save this'}
+              </Text>
+            </PressableScale>
+            <PressableScale
+              style={styles.checkButton}
+              onPress={() => navigation.navigate('Home')}
+            >
+              <Text style={styles.checkButtonText}>Check another</Text>
+            </PressableScale>
+          </Animated.View>
+        </ScrollView>
+
+        <PaywallModal visible={showPaywall} onDismiss={() => setShowPaywall(false)} />
+      </SafeAreaView>
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // Multi-product layout — stacked verdict cards
+  // -------------------------------------------------------------------------
   return (
     <SafeAreaView style={styles.safe}>
-      {/* ScrollView has no horizontal padding — VerdictBanner spans full width */}
-      <ScrollView contentContainerStyle={styles.container}>
-        {/* Full-width verdict band */}
-        <VerdictBanner emoji={emoji} verdict={verdict} color={color} />
-
-        {/* Two stat cards side by side */}
-        <View style={styles.statsRow}>
-          <Animated.View style={[styles.statCard, { opacity: stat1Opacity }]}>
-            <Text style={styles.statLabel}>Monthly cost</Text>
-            <Text style={styles.statValue}>{formatCurrency(monthlyCost, currency)}</Text>
-          </Animated.View>
-
-          <Animated.View style={[styles.statCard, { opacity: stat2Opacity }]}>
-            <Text style={styles.statLabel}>% of income</Text>
-            <Text style={[styles.statValue, { color }]}>{formatPercent(impactRatio)}</Text>
-          </Animated.View>
+      <ScrollView contentContainerStyle={styles.multiContainer}>
+        {/* Header */}
+        <View style={styles.multiHeader}>
+          <Text style={styles.multiTitle}>{results.length} products compared</Text>
+          <Text style={styles.multiSubtitle}>
+            Based on {formatCurrency(monthlyIncome, currency)}/mo income
+          </Text>
         </View>
 
-        {/* Quote-style displacement block */}
-        <Animated.View style={[styles.quoteBlock, { opacity: displacementOpacity }]}>
-          <View style={[styles.quoteBorder, { backgroundColor: colors.teal }]} />
-          <Text style={styles.quoteText}>{displacementText}</Text>
-        </Animated.View>
-
-        {/* Buttons */}
-        <Animated.View style={[styles.buttonGroup, { opacity: buttonsOpacity }]}>
-          {/* Save button — outlined teal, turns solid green when saved */}
-          <PressableScale
-            style={[styles.saveButton, saved && styles.saveButtonSaved]}
-            onPress={handleSave}
-            disabled={saved}
+        {/* Verdict cards */}
+        {results.map((result, index) => (
+          <Animated.View
+            key={index}
+            style={[styles.multiCard, { opacity: cardAnims[index] }]}
           >
-            <Text style={[styles.saveButtonText, saved && styles.saveButtonTextSaved]}>
-              {saved ? 'Saved ✓' : 'Save this'}
-            </Text>
-          </PressableScale>
+            {/* Colored left accent */}
+            <View style={[styles.multiCardAccent, { backgroundColor: result.color }]} />
 
-          {/* Check another — filled teal */}
-          <PressableScale
-            style={styles.checkButton}
-            onPress={() => navigation.navigate('Home')}
-          >
-            <Text style={styles.checkButtonText}>Check another</Text>
-          </PressableScale>
-        </Animated.View>
+            <View style={styles.multiCardBody}>
+              {/* Top row: emoji + label + verdict */}
+              <View style={styles.multiCardTop}>
+                <Text style={styles.multiCardEmoji}>{result.emoji}</Text>
+                <View style={styles.multiCardMeta}>
+                  <Text style={styles.multiCardLabel}>Product {index + 1}</Text>
+                  <Text style={[styles.multiCardVerdict, { color: result.color }]}>
+                    {result.verdict}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Stat row */}
+              <View style={styles.multiCardStats}>
+                <View style={styles.multiCardStat}>
+                  <Text style={styles.multiCardStatLabel}>Monthly cost</Text>
+                  <Text style={styles.multiCardStatValue}>
+                    {formatCurrency(result.monthlyCost, currency)}
+                  </Text>
+                </View>
+                <View style={styles.multiCardDivider} />
+                <View style={styles.multiCardStat}>
+                  <Text style={styles.multiCardStatLabel}>% of income</Text>
+                  <Text style={[styles.multiCardStatValue, { color: result.color }]}>
+                    {formatPercent(result.impactRatio)}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Per-card save button */}
+              <PressableScale
+                style={[
+                  styles.multiSaveButton,
+                  savedIds.has(index) && styles.multiSaveButtonSaved,
+                ]}
+                onPress={() => handleSave(result, index)}
+                disabled={savedIds.has(index)}
+              >
+                <Text style={[
+                  styles.multiSaveButtonText,
+                  savedIds.has(index) && styles.multiSaveButtonTextSaved,
+                ]}>
+                  {savedIds.has(index) ? 'Saved ✓' : 'Save this'}
+                </Text>
+              </PressableScale>
+            </View>
+          </Animated.View>
+        ))}
+
+        {/* Check another */}
+        <PressableScale
+          style={styles.checkButton}
+          onPress={() => navigation.navigate('Home')}
+        >
+          <Text style={styles.checkButtonText}>Check another</Text>
+        </PressableScale>
       </ScrollView>
 
-      {/* Paywall modal — slides up over the result after 3 free uses */}
-      <PaywallModal
-        visible={showPaywall}
-        onDismiss={() => setShowPaywall(false)}
-      />
+      <PaywallModal visible={showPaywall} onDismiss={() => setShowPaywall(false)} />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: colors.bg,
-  },
-  // No horizontal padding here — banner spans full width
+  safe: { flex: 1, backgroundColor: colors.bg },
+
+  // ---- Single-product styles ----
   container: {
     flexGrow: 1,
     paddingBottom: spacing.xxl,
     backgroundColor: colors.bg,
   },
-  // Two stat cards side by side
   statsRow: {
     flexDirection: 'row',
     gap: 16,
@@ -168,18 +237,8 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     alignItems: 'center',
   },
-  statLabel: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    marginBottom: spacing.xs,
-    textAlign: 'center',
-  },
-  statValue: {
-    ...typography.subheading,
-    color: colors.textPrimary,
-    textAlign: 'center',
-  },
-  // Quote-style displacement block
+  statLabel: { ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs, textAlign: 'center' },
+  statValue: { ...typography.subheading, color: colors.textPrimary, textAlign: 'center' },
   quoteBlock: {
     flexDirection: 'row',
     marginHorizontal: spacing.lg,
@@ -190,9 +249,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  quoteBorder: {
-    width: 3,
-  },
+  quoteBorder: { width: 3 },
   quoteText: {
     flex: 1,
     fontSize: 15,
@@ -201,12 +258,7 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     padding: spacing.md,
   },
-  // Button group
-  buttonGroup: {
-    paddingHorizontal: spacing.lg,
-    gap: 12,
-  },
-  // Outlined teal save button
+  buttonGroup: { paddingHorizontal: spacing.lg, gap: 12 },
   saveButton: {
     borderRadius: radii.md,
     paddingVertical: 16,
@@ -214,28 +266,77 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: colors.teal,
   },
-  saveButtonSaved: {
-    backgroundColor: colors.teal,
-    borderColor: colors.teal,
-  },
-  saveButtonText: {
-    color: colors.teal,
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  saveButtonTextSaved: {
-    color: '#0F0F0F',
-  },
-  // Filled teal check-another button
+  saveButtonSaved: { backgroundColor: colors.teal, borderColor: colors.teal },
+  saveButtonText: { color: colors.teal, fontSize: 16, fontWeight: '700' },
+  saveButtonTextSaved: { color: '#0F0F0F' },
   checkButton: {
     backgroundColor: colors.teal,
     borderRadius: radii.md,
     paddingVertical: 16,
     alignItems: 'center',
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.sm,
+    marginBottom: spacing.lg,
   },
-  checkButtonText: {
-    color: '#0F0F0F',
-    fontSize: 16,
+  checkButtonText: { color: '#0F0F0F', fontSize: 16, fontWeight: '700' },
+
+  // ---- Multi-product styles ----
+  multiContainer: {
+    flexGrow: 1,
+    paddingBottom: spacing.xxl,
+    backgroundColor: colors.bg,
+  },
+  multiHeader: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.lg,
+  },
+  multiTitle: { ...typography.title, color: colors.textPrimary, marginBottom: 4 },
+  multiSubtitle: { fontSize: 14, color: colors.textSecondary },
+  multiCard: {
+    flexDirection: 'row',
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
+  },
+  multiCardAccent: { width: 4 },
+  multiCardBody: { flex: 1, padding: spacing.md },
+  multiCardTop: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md },
+  multiCardEmoji: { fontSize: 32, marginRight: 12 },
+  multiCardMeta: { flex: 1 },
+  multiCardLabel: {
+    fontSize: 11,
     fontWeight: '700',
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 2,
   },
+  multiCardVerdict: { fontSize: 16, fontWeight: '700' },
+  multiCardStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+    backgroundColor: colors.bg,
+    borderRadius: radii.sm,
+    padding: spacing.sm,
+  },
+  multiCardStat: { flex: 1, alignItems: 'center' },
+  multiCardDivider: { width: 1, height: 32, backgroundColor: colors.border },
+  multiCardStatLabel: { ...typography.caption, color: colors.textMuted, marginBottom: 2 },
+  multiCardStatValue: { fontSize: 15, fontWeight: '700', color: colors.textPrimary },
+  multiSaveButton: {
+    borderRadius: radii.sm,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.teal,
+  },
+  multiSaveButtonSaved: { backgroundColor: colors.teal, borderColor: colors.teal },
+  multiSaveButtonText: { color: colors.teal, fontSize: 13, fontWeight: '700' },
+  multiSaveButtonTextSaved: { color: '#0F0F0F' },
 });
