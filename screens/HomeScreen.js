@@ -25,7 +25,7 @@ import {
 } from 'react-native';
 import { getVerdict } from '../utils/calculations';
 import { incrementUsageCount } from '../utils/storage';
-import { fetchPriceFromUrl } from '../utils/urlScraper';
+import { fetchPriceFromUrl, SUPPORTED_SITES } from '../utils/urlLookup';
 import { CURRENCIES, DEFAULT_CURRENCY } from '../utils/currencies';
 import PressableScale from '../components/PressableScale';
 import { colors, spacing, radii, typography } from '../theme';
@@ -70,9 +70,12 @@ export default function HomeScreen({ navigation }) {
     setPriceConfirmation('');
     setIsFetching(true);
     try {
-      const { price } = await fetchPriceFromUrl(productUrl.trim());
-      setAmount(formatInputValue(price.toFixed(2)));
-      setPriceConfirmation(`Found: ${currency.symbol}${price.toFixed(2)}`);
+      const { price, productName, site } = await fetchPriceFromUrl(productUrl.trim());
+      setAmount(formatInputValue(price.toFixed(currency.decimals)));
+      const label = productName
+        ? `Found on ${site}: ${currency.symbol}${price.toFixed(currency.decimals)} — ${productName}`
+        : `Found on ${site}: ${currency.symbol}${price.toFixed(currency.decimals)}`;
+      setPriceConfirmation(label);
       setProductUrl('');
     } catch (err) {
       setError(err.message);
@@ -260,7 +263,7 @@ export default function HomeScreen({ navigation }) {
           <View style={[styles.inputCard, urlFocused && styles.inputCardFocused]}>
             <TextInput
               style={[styles.input, { flex: 1 }]}
-              placeholder="Works on smaller shops, not Amazon/Etsy"
+              placeholder="Apple, Best Buy, IKEA, Wayfair, Zillow, Airbnb..."
               placeholderTextColor={colors.textMuted}
               keyboardType="url"
               autoCapitalize="none"
