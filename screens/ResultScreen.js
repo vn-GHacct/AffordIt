@@ -137,7 +137,7 @@ export default function ResultScreen({ route, navigation }) {
             </View>
             <View style={styles.tippingRow}>
               <View style={styles.tippingLeft}>
-                <View style={[styles.tippingDot, { backgroundColor: colors.warning }]} />
+                <View style={[styles.tippingDot, { backgroundColor: '#E09000' }]} />
                 <Text style={styles.tippingRowLabel}>Max stretch</Text>
               </View>
               <Text style={styles.tippingRowValue}>

@@ -8,30 +8,30 @@
 
 export const colors = {
   // Backgrounds
-  bg: '#0F0F0F',          // Page background
-  surface: '#1A1A1A',     // Card / input background
-  surfaceHigh: '#242424', // Elevated surface (e.g. modal sheet)
+  bg: '#FFFFFF',          // Page background
+  surface: '#F5F5F5',     // Card / input background
+  surfaceHigh: '#EEEEEE', // Elevated surface (e.g. modal sheet)
 
   // Brand
   teal: '#00C48C',        // Primary accent — CTA buttons, active states, borders
-  tealDim: '#00C48C22',   // Teal at ~13% opacity — subtle highlights
+  tealDim: '#00C48C18',   // Teal at ~10% opacity — subtle highlights
 
   // Text
-  textPrimary: '#FFFFFF',
-  textSecondary: '#AAAAAA',
-  textMuted: '#666666',
+  textPrimary: '#0D0D0D',
+  textSecondary: '#555555',
+  textMuted: '#999999',
 
   // Borders
-  border: '#2A2A2A',      // Subtle separator / card border
-  borderMid: '#333333',
+  border: '#E8E8E8',      // Subtle separator / card border
+  borderMid: '#DDDDDD',
 
   // Verdict
   success: '#00C48C',
-  warning: '#FFB547',
-  danger: '#FF6B6B',
+  warning: '#E09000',     // Slightly deeper amber — better contrast on white
+  danger: '#E0393E',      // Slightly deeper red — better contrast on white
 
   // Utility
-  overlay: 'rgba(0,0,0,0.75)',
+  overlay: 'rgba(0,0,0,0.5)',
   white: '#FFFFFF',
   transparent: 'transparent',
 };

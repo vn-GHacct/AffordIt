@@ -41,12 +41,12 @@ export default function App() {
   });
 
   if (!fontsLoaded) {
-    return <View style={{ flex: 1, backgroundColor: '#0F0F0F' }} />;
+    return <View style={{ flex: 1, backgroundColor: '#FFFFFF' }} />;
   }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       <NavigationContainer>
         <Stack.Navigator
           initialRouteName="Home"

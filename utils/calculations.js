@@ -30,11 +30,11 @@ export function getVerdict(monthlyIncome, purchaseAmount, isMonthlyPayment) {
     emoji = '✅';
   } else if (impactRatio <= 0.2) {
     verdict = 'This is a stretch';
-    color = '#FFB547'; // yellow
+    color = '#E09000'; // amber — readable on white
     emoji = '⚠️';
   } else {
     verdict = 'This will hurt';
-    color = '#FF6B6B'; // red
+    color = '#E0393E'; // red — readable on white
     emoji = '🚫';
   }
 
