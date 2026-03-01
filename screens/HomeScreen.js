@@ -39,7 +39,7 @@ function formatInputValue(text) {
 }
 
 function makeProduct() {
-  return { id: String(Date.now()) + String(Math.random()), amount: '', isMonthlyPayment: false, focused: false };
+  return { id: String(Date.now()) + String(Math.random()), name: '', amount: '', isMonthlyPayment: false, focused: false };
 }
 
 export default function HomeScreen({ navigation }) {
@@ -76,6 +76,7 @@ export default function HomeScreen({ navigation }) {
     try {
       const { price, productName, site } = await fetchPriceFromUrl(productUrl.trim());
       updateProduct(products[0].id, 'amount', formatInputValue(price.toFixed(currency.decimals)));
+      if (productName) updateProduct(products[0].id, 'name', productName);
       const label = productName
         ? `${site}: ${currency.symbol}${price.toFixed(currency.decimals)} — ${productName}`
         : `${site}: ${currency.symbol}${price.toFixed(currency.decimals)}`;
@@ -107,7 +108,7 @@ export default function HomeScreen({ navigation }) {
         return;
       }
       const result = getVerdict(monthlyIncome, purchaseAmount, p.isMonthlyPayment);
-      results.push({ ...result, purchaseAmount, isMonthlyPayment: p.isMonthlyPayment });
+      results.push({ ...result, purchaseAmount, isMonthlyPayment: p.isMonthlyPayment, name: p.name.trim() });
     }
 
     const usageCount = await incrementUsageCount();
@@ -184,12 +185,21 @@ export default function HomeScreen({ navigation }) {
               <View key={product.id} style={styles.productEntry}>
                 {products.length > 1 && (
                   <View style={styles.productMeta}>
-                    <Text style={styles.productIndex}>Product {index + 1}</Text>
+                    <Text style={styles.productIndex}>{index + 1}</Text>
                     <TouchableOpacity onPress={() => removeProduct(product.id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                       <Text style={styles.removeText}>Remove</Text>
                     </TouchableOpacity>
                   </View>
                 )}
+                <TextInput
+                  style={styles.nameInput}
+                  placeholder="What is it? (e.g. MacBook Pro)"
+                  placeholderTextColor={colors.textMuted}
+                  value={product.name}
+                  onChangeText={t => updateProduct(product.id, 'name', t)}
+                  returnKeyType="next"
+                  autoCorrect={false}
+                />
                 <View style={[styles.inputRow, product.focused && styles.inputRowFocused]}>
                   <Text style={styles.prefix}>{currency.symbol}</Text>
                   <TextInput
@@ -448,6 +458,16 @@ const styles = StyleSheet.create({
 
   // Product entries
   productEntry: { marginBottom: 10 },
+  nameInput: {
+    fontFamily: fonts.medium,
+    fontSize: 14,
+    color: colors.textPrimary,
+    backgroundColor: colors.surface,
+    borderRadius: radii.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+    marginBottom: 6,
+  },
   productMeta: {
     flexDirection: 'row',
     justifyContent: 'space-between',

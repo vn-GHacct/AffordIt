@@ -61,7 +61,9 @@ export default function ResultScreen({ route, navigation }) {
   }, []);
 
   const handleSave = async (result, index) => {
-    const label = `${result.isMonthlyPayment ? 'Payment of' : 'Purchase of'} ${currency.symbol}${Number(result.purchaseAmount).toLocaleString()}`;
+    const label = result.name
+      ? result.name
+      : `${result.isMonthlyPayment ? 'Payment' : 'Purchase'} of ${currency.symbol}${Number(result.purchaseAmount).toLocaleString()}`;
     await saveCalculation({
       verdict: result.verdict,
       color: result.color,
@@ -210,7 +212,7 @@ export default function ResultScreen({ route, navigation }) {
               {/* Top */}
               <View style={styles.multiCardTop}>
                 <View style={styles.multiCardTopLeft}>
-                  <Text style={styles.multiCardIndex}>Product {index + 1}</Text>
+                  <Text style={styles.multiCardIndex}>{result.name || `Product ${index + 1}`}</Text>
                   <Text style={[styles.multiCardVerdict, { color: result.color }]}>{result.verdict}</Text>
                 </View>
                 <Text style={[styles.multiCardPercent, { color: result.color }]}>
