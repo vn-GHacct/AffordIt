@@ -263,7 +263,7 @@ export default function HomeScreen({ navigation }) {
           <View style={[styles.inputCard, urlFocused && styles.inputCardFocused]}>
             <TextInput
               style={[styles.input, { flex: 1 }]}
-              placeholder="Apple, Target, Walmart, Etsy, eBay, Craigslist..."
+              placeholder="Apple, Target, Carvana, Newegg, Etsy, eBay..."
               placeholderTextColor={colors.textMuted}
               keyboardType="url"
               autoCapitalize="none"

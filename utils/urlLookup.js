@@ -32,6 +32,11 @@ import {
   parseEtsy,
   parseEbay,
   parseCraigslist,
+  parseCarvana,
+  parseRedfin,
+  parseWestElm,
+  parseNewegg,
+  parseBHPhoto,
 } from './siteScraper';
 
 // ---------------------------------------------------------------------------
@@ -79,6 +84,11 @@ const SITES = {
   etsy:        { parser: (html)       => parseEtsy(html),        tier: 1, label: 'Etsy' },
   ebay:        { parser: (html)       => parseEbay(html),        tier: 1, label: 'eBay' },
   craigslist:  { parser: (html)       => parseCraigslist(html),  tier: 2, label: 'Craigslist' },
+  carvana:     { parser: (html)       => parseCarvana(html),     tier: 1, label: 'Carvana' },
+  redfin:      { parser: (html)       => parseRedfin(html),      tier: 1, label: 'Redfin' },
+  westelm:     { parser: (html)       => parseWestElm(html),     tier: 1, label: 'West Elm' },
+  newegg:      { parser: (html)       => parseNewegg(html),      tier: 1, label: 'Newegg' },
+  bhphoto:     { parser: (html)       => parseBHPhoto(html),     tier: 1, label: 'B&H Photo' },
 };
 
 // Exported so the UI can show users what's supported
@@ -123,6 +133,11 @@ function detectSite(url) {
   if (hostname.includes('etsy.com'))        return 'etsy';
   if (hostname.includes('ebay.com'))        return 'ebay';
   if (hostname.includes('craigslist.org'))  return 'craigslist';
+  if (hostname.includes('carvana.com'))     return 'carvana';
+  if (hostname.includes('redfin.com'))      return 'redfin';
+  if (hostname.includes('westelm.com'))     return 'westelm';
+  if (hostname.includes('newegg.com'))      return 'newegg';
+  if (hostname.includes('bhphotovideo.com')) return 'bhphoto';
 
   return null;
 }

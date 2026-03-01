@@ -540,3 +540,125 @@ export function parseCraigslist(html) {
 
   return null;
 }
+
+export function parseCarvana(html) {
+  // Carvana is a Next.js app — price lives in __NEXT_DATA__
+  const nextData = parseNextData(html);
+  if (nextData) {
+    const price = deepFind(nextData, ['listPrice', 'price', 'salePrice'], 12);
+    if (price && price >= 1000 && price <= 200000) {
+      return { price, productName: cleanTitle(extractMetaTitle(html), 'Carvana'), site: 'Carvana' };
+    }
+  }
+
+  // Fallback: og:price:amount or page JSON
+  let price = extractMetaPrice(html);
+  if (!price) {
+    const m = /"(?:listPrice|price|salePrice)"\s*:\s*([0-9]+(?:\.[0-9]{2})?)/.exec(html);
+    if (m) {
+      const p = parseFloat(m[1]);
+      if (p >= 1000 && p <= 200000) price = p;
+    }
+  }
+
+  if (!price) return null;
+  return { price, productName: cleanTitle(extractMetaTitle(html), 'Carvana'), site: 'Carvana' };
+}
+
+export function parseRedfin(html) {
+  // Redfin is a Next.js app — try __NEXT_DATA__ first
+  const nextData = parseNextData(html);
+  if (nextData) {
+    const price = deepFind(nextData, ['price', 'listPrice', 'lastSalePrice'], 12);
+    if (price && price >= 10000 && price <= 10000000) {
+      return { price, productName: 'Redfin Listing', site: 'Redfin' };
+    }
+  }
+
+  // Fallback: Redfin embeds price in page JSON blobs
+  const patterns = [
+    /"price"\s*:\s*([0-9]{5,})/,
+    /"listPrice"\s*:\s*([0-9]{5,})/,
+    /\$\s*([0-9]{1,3}(?:,[0-9]{3})+)\s*(?:\/mo)?/,
+  ];
+  for (const p of patterns) {
+    const m = p.exec(html);
+    if (m) {
+      const price = parseFloat(m[1].replace(/,/g, ''));
+      if (price >= 10000 && price <= 10000000) {
+        return { price, productName: 'Redfin Listing', site: 'Redfin' };
+      }
+    }
+  }
+
+  return null;
+}
+
+export function parseWestElm(html) {
+  // West Elm is on the same Williams-Sonoma platform as Pottery Barn
+  const price = extractMetaPrice(html);
+  if (!price) return null;
+  return { price, productName: cleanTitle(extractMetaTitle(html), 'West Elm'), site: 'West Elm' };
+}
+
+export function parseNewegg(html) {
+  // Newegg uses og:price:amount and JSON-LD
+  let price = extractMetaPrice(html);
+
+  if (!price) {
+    const scriptRegex = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+    let m;
+    while ((m = scriptRegex.exec(html)) !== null) {
+      try {
+        const data = JSON.parse(m[1]);
+        const nodes = Array.isArray(data) ? data : data['@graph'] ? data['@graph'] : [data];
+        for (const node of nodes) {
+          if (node['@type'] !== 'Product') continue;
+          const offers = Array.isArray(node.offers) ? node.offers : [node.offers];
+          for (const offer of offers) {
+            const raw = offer?.price ?? offer?.lowPrice;
+            if (raw == null) continue;
+            const p = parseFloat(String(raw).replace(/[^0-9.]/g, ''));
+            if (isValidPrice(p)) { price = p; break; }
+          }
+          if (price) break;
+        }
+      } catch {}
+      if (price) break;
+    }
+  }
+
+  if (!price) return null;
+  return { price, productName: cleanTitle(extractMetaTitle(html), 'Newegg'), site: 'Newegg' };
+}
+
+export function parseBHPhoto(html) {
+  // B&H Photo uses og:price:amount and JSON-LD Product schema
+  let price = extractMetaPrice(html);
+
+  if (!price) {
+    const scriptRegex = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+    let m;
+    while ((m = scriptRegex.exec(html)) !== null) {
+      try {
+        const data = JSON.parse(m[1]);
+        const nodes = Array.isArray(data) ? data : data['@graph'] ? data['@graph'] : [data];
+        for (const node of nodes) {
+          if (node['@type'] !== 'Product') continue;
+          const offers = Array.isArray(node.offers) ? node.offers : [node.offers];
+          for (const offer of offers) {
+            const raw = offer?.price ?? offer?.lowPrice;
+            if (raw == null) continue;
+            const p = parseFloat(String(raw).replace(/[^0-9.]/g, ''));
+            if (isValidPrice(p)) { price = p; break; }
+          }
+          if (price) break;
+        }
+      } catch {}
+      if (price) break;
+    }
+  }
+
+  if (!price) return null;
+  return { price, productName: cleanTitle(extractMetaTitle(html), 'B&H Photo Video'), site: 'B&H Photo' };
+}
