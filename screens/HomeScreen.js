@@ -134,7 +134,7 @@ export default function HomeScreen({ navigation }) {
           </View>
 
           {/* Hero */}
-          <Text style={styles.hero}>Can you{'\n'}afford it?</Text>
+          <Text style={styles.hero} numberOfLines={1} adjustsFontSizeToFit>Can you afford it?</Text>
           <Text style={styles.subtext}>30-second gut check before any purchase.</Text>
 
           {/* Income */}
