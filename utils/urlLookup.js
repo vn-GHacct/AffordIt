@@ -224,7 +224,20 @@ export async function fetchPriceFromUrl(url) {
 
   // 4. Parse
   const { parser, tier } = SITES[siteKey];
-  const result = parser(html);
+  let result = parser(html);
+
+  // 4a. Apple overview pages (e.g. /iphone-17-pro/) carry no price themselves —
+  //     they embed a potentialAction.url pointing to the shop page that does.
+  //     Auto-follow it so users don't need to find the right shop URL manually.
+  if (!result && siteKey === 'apple') {
+    const buyMatch = /"potentialAction"[\s\S]{0,400}"url"\s*:\s*\[\s*"(https:\/\/www\.apple\.com\/[^"]+)"/.exec(html);
+    if (buyMatch) {
+      try {
+        const shopHtml = await fetchHtml(buyMatch[1]);
+        result = parser(shopHtml);
+      } catch {}
+    }
+  }
 
   if (!result) {
     if (tier === 2) {

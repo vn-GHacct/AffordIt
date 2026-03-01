@@ -111,23 +111,48 @@ function deepFind(obj, keys, maxDepth = 10, _depth = 0) {
 // ---------------------------------------------------------------------------
 
 export function parseApple(html) {
+  // Strategy 1: JSON-LD Product schema — handles both regular Offer (price)
+  // and AggregateOffer (lowPrice) as used on Apple shop pages
+  const scriptRegex = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+  let m;
+  while ((m = scriptRegex.exec(html)) !== null) {
+    try {
+      const data = JSON.parse(m[1]);
+      const nodes = Array.isArray(data) ? data : data['@graph'] ? data['@graph'] : [data];
+      for (const node of nodes) {
+        if (node['@type'] !== 'Product') continue;
+        const offersRaw = node.offers;
+        if (!offersRaw) continue;
+        const offers = Array.isArray(offersRaw) ? offersRaw : [offersRaw];
+        for (const offer of offers) {
+          const raw = offer?.lowPrice ?? offer?.price;
+          if (raw == null) continue;
+          const price = parseFloat(String(raw).replace(/[^0-9.]/g, ''));
+          if (isValidPrice(price)) {
+            const name = node.name
+              ? cleanTitle(node.name, 'Apple')
+              : cleanTitle(extractMetaTitle(html), 'Apple');
+            return { price, productName: name, site: 'Apple' };
+          }
+        }
+      }
+    } catch {}
+  }
+
+  // Strategy 2: og:price:amount meta tag
   let price = extractMetaPrice(html);
 
-  // Fallback: Apple embeds prices in JSON-LD and data attributes
+  // Strategy 3: inline JS price key
   if (!price) {
-    const m = /"price"\s*:\s*"?([0-9]+(?:\.[0-9]{2})?)"?/.exec(html);
-    if (m) {
-      const p = parseFloat(m[1]);
+    const pm = /"price"\s*:\s*"?([0-9]+(?:\.[0-9]{2})?)"?/.exec(html);
+    if (pm) {
+      const p = parseFloat(pm[1]);
       if (isValidPrice(p)) price = p;
     }
   }
 
   if (!price) return null;
-  return {
-    price,
-    productName: cleanTitle(extractMetaTitle(html), 'Apple'),
-    site: 'Apple',
-  };
+  return { price, productName: cleanTitle(extractMetaTitle(html), 'Apple'), site: 'Apple' };
 }
 
 export function parseBestBuy(html) {
