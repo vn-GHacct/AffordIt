@@ -37,6 +37,11 @@ import {
   parseWestElm,
   parseNewegg,
   parseBHPhoto,
+  parseSamsung,
+  parseEdmunds,
+  parseCarsDotCom,
+  parseRealtor,
+  parseApartmentsDotCom,
 } from './siteScraper';
 
 // ---------------------------------------------------------------------------
@@ -89,6 +94,11 @@ const SITES = {
   westelm:     { parser: (html)       => parseWestElm(html),     tier: 1, label: 'West Elm' },
   newegg:      { parser: (html)       => parseNewegg(html),      tier: 1, label: 'Newegg' },
   bhphoto:     { parser: (html)       => parseBHPhoto(html),     tier: 1, label: 'B&H Photo' },
+  samsung:     { parser: (html)       => parseSamsung(html),     tier: 1, label: 'Samsung' },
+  edmunds:     { parser: (html)       => parseEdmunds(html),     tier: 1, label: 'Edmunds' },
+  carsdotcom:  { parser: (html)       => parseCarsDotCom(html),  tier: 1, label: 'Cars.com' },
+  realtor:     { parser: (html)       => parseRealtor(html),     tier: 1, label: 'Realtor.com' },
+  apartments:  { parser: (html)       => parseApartmentsDotCom(html), tier: 2, label: 'Apartments.com' },
 };
 
 // Exported so the UI can show users what's supported
@@ -138,6 +148,11 @@ function detectSite(url) {
   if (hostname.includes('westelm.com'))     return 'westelm';
   if (hostname.includes('newegg.com'))      return 'newegg';
   if (hostname.includes('bhphotovideo.com')) return 'bhphoto';
+  if (hostname.includes('samsung.com'))     return 'samsung';
+  if (hostname.includes('edmunds.com'))     return 'edmunds';
+  if (hostname.includes('cars.com'))        return 'carsdotcom';
+  if (hostname.includes('realtor.com'))     return 'realtor';
+  if (hostname.includes('apartments.com'))  return 'apartments';
 
   return null;
 }

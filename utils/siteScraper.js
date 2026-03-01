@@ -662,3 +662,148 @@ export function parseBHPhoto(html) {
   if (!price) return null;
   return { price, productName: cleanTitle(extractMetaTitle(html), 'B&H Photo Video'), site: 'B&H Photo' };
 }
+
+export function parseSamsung(html) {
+  // Samsung uses og:price:amount and JSON-LD Product schema
+  let price = extractMetaPrice(html);
+
+  if (!price) {
+    const scriptRegex = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+    let m;
+    while ((m = scriptRegex.exec(html)) !== null) {
+      try {
+        const data = JSON.parse(m[1]);
+        const nodes = Array.isArray(data) ? data : data['@graph'] ? data['@graph'] : [data];
+        for (const node of nodes) {
+          if (node['@type'] !== 'Product') continue;
+          const offers = Array.isArray(node.offers) ? node.offers : [node.offers];
+          for (const offer of offers) {
+            const raw = offer?.price ?? offer?.lowPrice;
+            if (raw == null) continue;
+            const p = parseFloat(String(raw).replace(/[^0-9.]/g, ''));
+            if (isValidPrice(p)) { price = p; break; }
+          }
+          if (price) break;
+        }
+      } catch {}
+      if (price) break;
+    }
+  }
+
+  if (!price) return null;
+  return { price, productName: cleanTitle(extractMetaTitle(html), 'Samsung'), site: 'Samsung' };
+}
+
+export function parseEdmunds(html) {
+  // Edmunds embeds vehicle pricing in page JSON and og:price:amount
+  let price = extractMetaPrice(html);
+
+  if (!price) {
+    // Edmunds uses patterns like "price":32995 in page scripts
+    const patterns = [
+      /"(?:price|tmv|totalPrice|msrp)"\s*:\s*([0-9]{4,6})/,
+      /"asking_price"\s*:\s*([0-9]{4,6})/,
+    ];
+    for (const p of patterns) {
+      const m = p.exec(html);
+      if (m) {
+        const val = parseFloat(m[1]);
+        if (val >= 1000 && val <= 200000) { price = val; break; }
+      }
+    }
+  }
+
+  if (!price) return null;
+  return { price, productName: cleanTitle(extractMetaTitle(html), 'Edmunds'), site: 'Edmunds' };
+}
+
+export function parseCarsDotCom(html) {
+  // Cars.com uses og:price:amount and embeds price in page JSON
+  let price = extractMetaPrice(html);
+
+  if (!price) {
+    const patterns = [
+      /"price"\s*:\s*([0-9]{4,6})/,
+      /"listPrice"\s*:\s*([0-9]{4,6})/,
+      /"asking_price"\s*:\s*([0-9]{4,6})/,
+    ];
+    for (const p of patterns) {
+      const m = p.exec(html);
+      if (m) {
+        const val = parseFloat(m[1]);
+        if (val >= 1000 && val <= 200000) { price = val; break; }
+      }
+    }
+  }
+
+  if (!price) return null;
+  return { price, productName: cleanTitle(extractMetaTitle(html), 'Cars.com'), site: 'Cars.com' };
+}
+
+export function parseRealtor(html) {
+  // Realtor.com is a Next.js app — try __NEXT_DATA__ first
+  const nextData = parseNextData(html);
+  if (nextData) {
+    const price = deepFind(nextData, ['price', 'listPrice', 'list_price'], 12);
+    if (price && price >= 10000 && price <= 10000000) {
+      return { price, productName: 'Realtor.com Listing', site: 'Realtor.com' };
+    }
+  }
+
+  // Fallback: price patterns in page JSON
+  const patterns = [
+    /"list_price"\s*:\s*([0-9]{5,})/,
+    /"price"\s*:\s*([0-9]{5,})/,
+  ];
+  for (const p of patterns) {
+    const m = p.exec(html);
+    if (m) {
+      const price = parseFloat(m[1]);
+      if (price >= 10000 && price <= 10000000) {
+        return { price, productName: 'Realtor.com Listing', site: 'Realtor.com' };
+      }
+    }
+  }
+
+  return null;
+}
+
+export function parseApartmentsDotCom(html) {
+  // Apartments.com embeds rent price in page JSON and og:description
+  // Prices are monthly rent, typically $500–$15,000/mo
+
+  // Try page JSON first — apartments.com uses patterns like "price":1850
+  const patterns = [
+    /"(?:price|rent|minRent|maxRent)"\s*:\s*([0-9]{3,5})/,
+    /"rentRange"\s*:\s*"?\$?([0-9,]+)/,
+  ];
+  for (const p of patterns) {
+    const m = p.exec(html);
+    if (m) {
+      const price = parseFloat(m[1].replace(/,/g, ''));
+      if (price >= 200 && price <= 50000) {
+        return { price, productName: cleanTitle(extractMetaTitle(html), 'Apartments.com'), site: 'Apartments.com' };
+      }
+    }
+  }
+
+  // Fallback: og:description often contains "$X/mo" or "$X,XXX"
+  const descPatterns = [
+    /<meta\s[^>]*property=["']og:description["'][^>]*content=["']([^"']+)["'][^>]*\/?>/i,
+    /<meta\s[^>]*content=["']([^"']+)["'][^>]*property=["']og:description["'][^>]*\/?>/i,
+  ];
+  for (const p of descPatterns) {
+    const m = p.exec(html);
+    if (m) {
+      const priceM = /\$\s*([0-9,]+)/.exec(m[1]);
+      if (priceM) {
+        const price = parseFloat(priceM[1].replace(/,/g, ''));
+        if (price >= 200 && price <= 50000) {
+          return { price, productName: cleanTitle(extractMetaTitle(html), 'Apartments.com'), site: 'Apartments.com' };
+        }
+      }
+    }
+  }
+
+  return null;
+}
