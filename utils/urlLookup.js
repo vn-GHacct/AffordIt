@@ -25,6 +25,10 @@ import {
   parseAutoTrader,
   parsePotteryBarn,
   parseAirbnb,
+  parseTarget,
+  parseWalmart,
+  parseHomeDepot,
+  parseCostco,
 } from './siteScraper';
 
 // ---------------------------------------------------------------------------
@@ -60,6 +64,10 @@ const SITES = {
   autotrader:  { parser: (html)       => parseAutoTrader(html),  tier: 2, label: 'AutoTrader' },
   potterybarn: { parser: (html)       => parsePotteryBarn(html), tier: 2, label: 'Pottery Barn' },
   airbnb:      { parser: (html)       => parseAirbnb(html),      tier: 2, label: 'Airbnb' },
+  target:      { parser: (html)       => parseTarget(html),      tier: 1, label: 'Target' },
+  walmart:     { parser: (html)       => parseWalmart(html),     tier: 1, label: 'Walmart' },
+  homedepot:   { parser: (html)       => parseHomeDepot(html),   tier: 1, label: 'Home Depot' },
+  costco:      { parser: (html)       => parseCostco(html),      tier: 1, label: 'Costco' },
 };
 
 // Exported so the UI can show users what's supported
@@ -93,6 +101,10 @@ function detectSite(url) {
   if (hostname.includes('autotrader.com'))  return 'autotrader';
   if (hostname.includes('potterybarn.com')) return 'potterybarn';
   if (hostname.includes('airbnb.com'))      return 'airbnb';
+  if (hostname.includes('target.com'))      return 'target';
+  if (hostname.includes('walmart.com'))     return 'walmart';
+  if (hostname.includes('homedepot.com'))   return 'homedepot';
+  if (hostname.includes('costco.com'))      return 'costco';
 
   return null;
 }

@@ -303,3 +303,129 @@ export function parseAirbnb(html) {
 
   return null;
 }
+
+// ---------------------------------------------------------------------------
+// Additional Tier 1 parsers
+// ---------------------------------------------------------------------------
+
+export function parseTarget(html) {
+  // Target uses JSON-LD Product schema reliably
+  const scriptRegex = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+  let m;
+  while ((m = scriptRegex.exec(html)) !== null) {
+    try {
+      const data = JSON.parse(m[1]);
+      const nodes = Array.isArray(data) ? data : data['@graph'] ? data['@graph'] : [data];
+      for (const node of nodes) {
+        if (node['@type'] !== 'Product') continue;
+        const offers = Array.isArray(node.offers) ? node.offers : [node.offers];
+        for (const offer of offers) {
+          const raw = offer?.price ?? offer?.lowPrice;
+          if (raw == null) continue;
+          const price = parseFloat(String(raw).replace(/[^0-9.]/g, ''));
+          if (isValidPrice(price)) {
+            return { price, productName: cleanTitle(extractMetaTitle(html), 'Target'), site: 'Target' };
+          }
+        }
+      }
+    } catch {}
+  }
+
+  // Fallback: og:price:amount meta tag
+  const price = extractMetaPrice(html);
+  if (!price) return null;
+  return { price, productName: cleanTitle(extractMetaTitle(html), 'Target'), site: 'Target' };
+}
+
+export function parseWalmart(html) {
+  // Walmart is a Next.js app — price lives in __NEXT_DATA__
+  const nextData = parseNextData(html);
+  if (nextData) {
+    const price = deepFind(nextData, ['price', 'currentPrice', 'priceInfo'], 12);
+    if (price && isValidPrice(price)) {
+      return { price, productName: cleanTitle(extractMetaTitle(html), 'Walmart'), site: 'Walmart' };
+    }
+  }
+
+  // Fallback: og:price:amount or embedded JSON
+  let price = extractMetaPrice(html);
+  if (!price) {
+    const priceM = /"price"\s*:\s*([0-9]+(?:\.[0-9]{2})?)/.exec(html);
+    if (priceM) {
+      const p = parseFloat(priceM[1]);
+      if (isValidPrice(p)) price = p;
+    }
+  }
+
+  if (!price) return null;
+  return { price, productName: cleanTitle(extractMetaTitle(html), 'Walmart'), site: 'Walmart' };
+}
+
+export function parseHomeDepot(html) {
+  // Home Depot uses JSON-LD Product schema
+  const scriptRegex = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+  let m;
+  while ((m = scriptRegex.exec(html)) !== null) {
+    try {
+      const data = JSON.parse(m[1]);
+      const nodes = Array.isArray(data) ? data : data['@graph'] ? data['@graph'] : [data];
+      for (const node of nodes) {
+        if (node['@type'] !== 'Product') continue;
+        const offers = Array.isArray(node.offers) ? node.offers : [node.offers];
+        for (const offer of offers) {
+          const raw = offer?.price ?? offer?.lowPrice;
+          if (raw == null) continue;
+          const price = parseFloat(String(raw).replace(/[^0-9.]/g, ''));
+          if (isValidPrice(price)) {
+            return { price, productName: cleanTitle(extractMetaTitle(html), 'The Home Depot', 'Home Depot'), site: 'Home Depot' };
+          }
+        }
+      }
+    } catch {}
+  }
+
+  // Fallback: meta price or page JSON
+  let price = extractMetaPrice(html);
+  if (!price) {
+    const priceM = /"(?:specialPrice|currentPrice|originalPrice)"\s*:\s*([0-9]+(?:\.[0-9]{2})?)/.exec(html);
+    if (priceM) {
+      const p = parseFloat(priceM[1]);
+      if (isValidPrice(p)) price = p;
+    }
+  }
+
+  if (!price) return null;
+  return { price, productName: cleanTitle(extractMetaTitle(html), 'The Home Depot', 'Home Depot'), site: 'Home Depot' };
+}
+
+export function parseCostco(html) {
+  // Costco uses og:price:amount reliably
+  let price = extractMetaPrice(html);
+
+  // Fallback: JSON-LD
+  if (!price) {
+    const scriptRegex = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+    let m;
+    while ((m = scriptRegex.exec(html)) !== null) {
+      try {
+        const data = JSON.parse(m[1]);
+        const nodes = Array.isArray(data) ? data : data['@graph'] ? data['@graph'] : [data];
+        for (const node of nodes) {
+          if (node['@type'] !== 'Product') continue;
+          const offers = Array.isArray(node.offers) ? node.offers : [node.offers];
+          for (const offer of offers) {
+            const raw = offer?.price ?? offer?.lowPrice;
+            if (raw == null) continue;
+            const p = parseFloat(String(raw).replace(/[^0-9.]/g, ''));
+            if (isValidPrice(p)) { price = p; break; }
+          }
+          if (price) break;
+        }
+      } catch {}
+      if (price) break;
+    }
+  }
+
+  if (!price) return null;
+  return { price, productName: cleanTitle(extractMetaTitle(html), 'Costco'), site: 'Costco' };
+}
