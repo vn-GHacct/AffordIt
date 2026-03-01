@@ -123,17 +123,28 @@ export default function HomeScreen({ navigation }) {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Header row: wordmark + settings */}
+          {/* Header row: wordmark + actions */}
           <View style={styles.header}>
             <Text style={styles.wordmark}>AffordIt</Text>
-            <TouchableOpacity
-              style={styles.settingsButton}
-              onPress={() => setShowCurrencyModal(true)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Text style={styles.settingsLabel}>{currency.symbol} {currency.code}</Text>
-              <Text style={styles.settingsChevron}>›</Text>
-            </TouchableOpacity>
+            <View style={styles.headerActions}>
+              <TouchableOpacity
+                style={styles.settingsButton}
+                onPress={() => setShowCurrencyModal(true)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Text style={styles.settingsLabel}>{currency.symbol} {currency.code}</Text>
+                <Text style={styles.settingsChevron}>›</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.menuButton}
+                onPress={() => setShowHistory(true)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <View style={styles.menuBar} />
+                <View style={styles.menuBar} />
+                <View style={styles.menuBar} />
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Hero */}
@@ -279,9 +290,6 @@ export default function HomeScreen({ navigation }) {
           <PressableScale onPress={handleCheck} style={styles.cta}>
             <Text style={styles.ctaText}>Check It</Text>
           </PressableScale>
-          <TouchableOpacity onPress={() => setShowHistory(true)}>
-            <Text style={styles.savedLink}>View saved checks</Text>
-          </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
 
@@ -344,6 +352,11 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     letterSpacing: -0.5,
   },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
   settingsButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -365,6 +378,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.textMuted,
     marginLeft: 2,
+  },
+  menuButton: {
+    width: 36,
+    height: 36,
+    borderRadius: radii.sm,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  menuBar: {
+    width: 16,
+    height: 1.5,
+    backgroundColor: colors.textSecondary,
+    borderRadius: 1,
   },
 
   // Hero
@@ -561,13 +591,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   ctaText: { fontFamily: fonts.bold, fontSize: 16, color: '#0F0F0F', letterSpacing: 0.2 },
-  savedLink: {
-    fontFamily: fonts.regular,
-    textAlign: 'center',
-    fontSize: 13,
-    color: colors.textMuted,
-    paddingVertical: 6,
-  },
 
   // Currency modal
   modalOverlay: {
