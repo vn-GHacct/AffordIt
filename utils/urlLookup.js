@@ -29,6 +29,9 @@ import {
   parseWalmart,
   parseHomeDepot,
   parseCostco,
+  parseEtsy,
+  parseEbay,
+  parseCraigslist,
 } from './siteScraper';
 
 // ---------------------------------------------------------------------------
@@ -50,8 +53,13 @@ const BLOCKED_HOSTNAMES = [
   'amazon', 'booking.com', 'expedia', 'hotels.com', 'kayak',
   'tripadvisor', 'united.com', 'delta.com', 'aa.com', 'southwest.com',
   'spirit.com', 'jetblue.com', 'priceline', 'tiffany', 'cartier', 'rolex',
-  'sothebys', 'etsy.com',
+  'sothebys',
 ];
+
+// Sites that need a specific, more helpful blocked message
+const SPECIFIC_BLOCKED = {
+  'facebook.com': "Facebook Marketplace requires a login and loads prices dynamically — enter it manually.",
+};
 
 // Map of site key → { parser, tier, label }
 const SITES = {
@@ -68,6 +76,9 @@ const SITES = {
   walmart:     { parser: (html)       => parseWalmart(html),     tier: 1, label: 'Walmart' },
   homedepot:   { parser: (html)       => parseHomeDepot(html),   tier: 1, label: 'Home Depot' },
   costco:      { parser: (html)       => parseCostco(html),      tier: 1, label: 'Costco' },
+  etsy:        { parser: (html)       => parseEtsy(html),        tier: 1, label: 'Etsy' },
+  ebay:        { parser: (html)       => parseEbay(html),        tier: 1, label: 'eBay' },
+  craigslist:  { parser: (html)       => parseCraigslist(html),  tier: 2, label: 'Craigslist' },
 };
 
 // Exported so the UI can show users what's supported
@@ -88,6 +99,10 @@ function detectSite(url) {
     return null;
   }
 
+  for (const pattern of Object.keys(SPECIFIC_BLOCKED)) {
+    if (hostname.includes(pattern)) return `__specific__${pattern}`;
+  }
+
   for (const blocked of BLOCKED_HOSTNAMES) {
     if (hostname.includes(blocked)) return '__blocked__';
   }
@@ -105,6 +120,9 @@ function detectSite(url) {
   if (hostname.includes('walmart.com'))     return 'walmart';
   if (hostname.includes('homedepot.com'))   return 'homedepot';
   if (hostname.includes('costco.com'))      return 'costco';
+  if (hostname.includes('etsy.com'))        return 'etsy';
+  if (hostname.includes('ebay.com'))        return 'ebay';
+  if (hostname.includes('craigslist.org'))  return 'craigslist';
 
   return null;
 }
@@ -153,6 +171,11 @@ export async function fetchPriceFromUrl(url) {
 
   // 2. Detect site
   const siteKey = detectSite(url);
+
+  if (siteKey?.startsWith('__specific__')) {
+    const pattern = siteKey.replace('__specific__', '');
+    throw new Error(SPECIFIC_BLOCKED[pattern]);
+  }
 
   if (siteKey === '__blocked__') {
     throw new Error(

@@ -429,3 +429,114 @@ export function parseCostco(html) {
   if (!price) return null;
   return { price, productName: cleanTitle(extractMetaTitle(html), 'Costco'), site: 'Costco' };
 }
+
+export function parseEtsy(html) {
+  // Etsy uses og:price:amount and JSON-LD Product schema
+  let price = extractMetaPrice(html);
+
+  if (!price) {
+    const scriptRegex = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+    let m;
+    while ((m = scriptRegex.exec(html)) !== null) {
+      try {
+        const data = JSON.parse(m[1]);
+        const nodes = Array.isArray(data) ? data : data['@graph'] ? data['@graph'] : [data];
+        for (const node of nodes) {
+          if (node['@type'] !== 'Product') continue;
+          const offers = Array.isArray(node.offers) ? node.offers : [node.offers];
+          for (const offer of offers) {
+            const raw = offer?.price ?? offer?.lowPrice;
+            if (raw == null) continue;
+            const p = parseFloat(String(raw).replace(/[^0-9.]/g, ''));
+            if (isValidPrice(p)) { price = p; break; }
+          }
+          if (price) break;
+        }
+      } catch {}
+      if (price) break;
+    }
+  }
+
+  if (!price) return null;
+  return { price, productName: cleanTitle(extractMetaTitle(html), 'Etsy'), site: 'Etsy' };
+}
+
+export function parseEbay(html) {
+  // eBay uses og:price:amount and JSON-LD
+  let price = extractMetaPrice(html);
+
+  if (!price) {
+    const scriptRegex = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+    let m;
+    while ((m = scriptRegex.exec(html)) !== null) {
+      try {
+        const data = JSON.parse(m[1]);
+        const nodes = Array.isArray(data) ? data : data['@graph'] ? data['@graph'] : [data];
+        for (const node of nodes) {
+          if (node['@type'] !== 'Product') continue;
+          const offers = Array.isArray(node.offers) ? node.offers : [node.offers];
+          for (const offer of offers) {
+            const raw = offer?.price ?? offer?.lowPrice;
+            if (raw == null) continue;
+            const p = parseFloat(String(raw).replace(/[^0-9.]/g, ''));
+            if (isValidPrice(p)) { price = p; break; }
+          }
+          if (price) break;
+        }
+      } catch {}
+      if (price) break;
+    }
+  }
+
+  // Fallback: eBay embeds price in page JSON
+  if (!price) {
+    const m = /"price"\s*:\s*"?([0-9]+(?:\.[0-9]{2})?)"?/.exec(html);
+    if (m) {
+      const p = parseFloat(m[1]);
+      if (isValidPrice(p)) price = p;
+    }
+  }
+
+  if (!price) return null;
+  return { price, productName: cleanTitle(extractMetaTitle(html), 'eBay'), site: 'eBay' };
+}
+
+export function parseCraigslist(html) {
+  // Craigslist is simple HTML — price lives in <span class="price">
+  const spanMatch = /<span[^>]*class=["'][^"']*price[^"']*["'][^>]*>\s*\$\s*([0-9,]+)\s*<\/span>/i.exec(html);
+  if (spanMatch) {
+    const price = parseFloat(spanMatch[1].replace(/,/g, ''));
+    if (isValidPrice(price)) {
+      return { price, productName: cleanTitle(extractMetaTitle(html), 'Craigslist'), site: 'Craigslist' };
+    }
+  }
+
+  // Fallback: og:description often starts with price
+  const descPatterns = [
+    /<meta\s[^>]*property=["']og:description["'][^>]*content=["']([^"']+)["'][^>]*\/?>/i,
+    /<meta\s[^>]*content=["']([^"']+)["'][^>]*property=["']og:description["'][^>]*\/?>/i,
+  ];
+  for (const p of descPatterns) {
+    const m = p.exec(html);
+    if (m) {
+      const priceM = /\$\s*([0-9,]+)/.exec(m[1]);
+      if (priceM) {
+        const price = parseFloat(priceM[1].replace(/,/g, ''));
+        if (isValidPrice(price)) {
+          return { price, productName: cleanTitle(extractMetaTitle(html), 'Craigslist'), site: 'Craigslist' };
+        }
+      }
+    }
+  }
+
+  // Last resort: first $X,XXX pattern in the page body
+  const bodyMatch = /\$\s*([0-9]{1,3}(?:,[0-9]{3})+|[0-9]{2,6})(?:\.[0-9]{2})?/.exec(html);
+  if (bodyMatch) {
+    const price = parseFloat(bodyMatch[1].replace(/,/g, ''));
+    if (isValidPrice(price)) {
+      return { price, productName: cleanTitle(extractMetaTitle(html), 'Craigslist'), site: 'Craigslist' };
+    }
+  }
+
+  return null;
+}
