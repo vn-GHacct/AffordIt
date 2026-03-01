@@ -100,8 +100,12 @@ export default function ResultScreen({ route, navigation }) {
           </View>
 
           <Animated.View style={[styles.quoteBlock, { opacity: displacementAnim }]}>
-            <View style={[styles.quoteBorder, { backgroundColor: colors.teal }]} />
-            <Text style={styles.quoteText}>{result.displacementText}</Text>
+            <View style={[styles.quoteBorder, { backgroundColor: result.color }]} />
+            <View style={styles.quoteContent}>
+              <Text style={styles.quoteLabel}>Why this verdict</Text>
+              <Text style={styles.quoteText}>{result.rationaleText}</Text>
+              <Text style={styles.quoteContext}>{result.displacementText}</Text>
+            </View>
           </Animated.View>
 
           <Animated.View style={[styles.tippingBlock, { opacity: tippingAnim }]}>
@@ -198,13 +202,10 @@ export default function ResultScreen({ route, navigation }) {
                 </View>
               </View>
 
-              {/* Tipping point */}
-              <View style={styles.multiTipping}>
-                <View style={[styles.tippingDot, { backgroundColor: '#00C48C' }]} />
-                <Text style={styles.multiTippingText}>
-                  Comfortable at {formatCurrency(result.tippingPoints.comfortable, currency)} or less
-                </Text>
-              </View>
+              {/* Rationale short */}
+              <Text style={[styles.multiRationale, { color: result.color }]}>
+                {result.rationaleShort}
+              </Text>
 
               {/* Per-card save button */}
               <PressableScale
@@ -278,13 +279,29 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   quoteBorder: { width: 3 },
+  quoteContent: { flex: 1, padding: spacing.md },
+  quoteLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 6,
+  },
   quoteText: {
-    flex: 1,
-    fontSize: 15,
+    fontSize: 14,
     color: colors.textSecondary,
-    lineHeight: 24,
+    lineHeight: 22,
+    marginBottom: 10,
+  },
+  quoteContext: {
+    fontSize: 13,
+    color: colors.textMuted,
+    lineHeight: 20,
     fontStyle: 'italic',
-    padding: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: 8,
   },
   buttonGroup: { paddingHorizontal: spacing.lg, gap: 12 },
   saveButton: {
@@ -396,16 +413,10 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.textPrimary,
   },
-  multiTipping: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  multiTippingText: {
+  multiRationale: {
     fontSize: 12,
-    color: colors.textSecondary,
-    marginLeft: 6,
-    flex: 1,
+    fontWeight: '600',
+    marginBottom: spacing.sm,
   },
 
   multiSaveButton: {
