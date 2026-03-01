@@ -34,10 +34,11 @@ export default function ResultScreen({ route, navigation }) {
 
   const isSingle = results.length === 1;
 
-  // Single-product animations (4-step stagger matching original design)
+  // Single-product animations (5-step stagger)
   const stat1Anim = useRef(new Animated.Value(0)).current;
   const stat2Anim = useRef(new Animated.Value(0)).current;
   const displacementAnim = useRef(new Animated.Value(0)).current;
+  const tippingAnim = useRef(new Animated.Value(0)).current;
   const buttonsAnim = useRef(new Animated.Value(0)).current;
 
   // Multi-product animations (one per card)
@@ -45,10 +46,11 @@ export default function ResultScreen({ route, navigation }) {
 
   useEffect(() => {
     if (isSingle) {
-      Animated.stagger(150, [
+      Animated.stagger(120, [
         Animated.timing(stat1Anim, { toValue: 1, duration: 300, useNativeDriver: true }),
         Animated.timing(stat2Anim, { toValue: 1, duration: 300, useNativeDriver: true }),
         Animated.timing(displacementAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+        Animated.timing(tippingAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
         Animated.timing(buttonsAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
       ]).start();
     } else {
@@ -100,6 +102,24 @@ export default function ResultScreen({ route, navigation }) {
           <Animated.View style={[styles.quoteBlock, { opacity: displacementAnim }]}>
             <View style={[styles.quoteBorder, { backgroundColor: colors.teal }]} />
             <Text style={styles.quoteText}>{result.displacementText}</Text>
+          </Animated.View>
+
+          <Animated.View style={[styles.tippingBlock, { opacity: tippingAnim }]}>
+            <Text style={styles.tippingTitle}>Tipping point</Text>
+            <View style={styles.tippingRow}>
+              <View style={[styles.tippingDot, { backgroundColor: '#00C48C' }]} />
+              <Text style={styles.tippingLabel}>Comfortable</Text>
+              <Text style={styles.tippingValue}>
+                {formatCurrency(result.tippingPoints.comfortable, currency)} or less
+              </Text>
+            </View>
+            <View style={styles.tippingRow}>
+              <View style={[styles.tippingDot, { backgroundColor: '#FFB547' }]} />
+              <Text style={styles.tippingLabel}>Max stretch</Text>
+              <Text style={styles.tippingValue}>
+                {formatCurrency(result.tippingPoints.stretch, currency)} or less
+              </Text>
+            </View>
           </Animated.View>
 
           <Animated.View style={[styles.buttonGroup, { opacity: buttonsAnim }]}>
@@ -176,6 +196,14 @@ export default function ResultScreen({ route, navigation }) {
                     {formatPercent(result.impactRatio)}
                   </Text>
                 </View>
+              </View>
+
+              {/* Tipping point */}
+              <View style={styles.multiTipping}>
+                <View style={[styles.tippingDot, { backgroundColor: '#00C48C' }]} />
+                <Text style={styles.multiTippingText}>
+                  Comfortable at {formatCurrency(result.tippingPoints.comfortable, currency)} or less
+                </Text>
               </View>
 
               {/* Per-card save button */}
@@ -329,6 +357,57 @@ const styles = StyleSheet.create({
   multiCardDivider: { width: 1, height: 32, backgroundColor: colors.border },
   multiCardStatLabel: { ...typography.caption, color: colors.textMuted, marginBottom: 2 },
   multiCardStatValue: { fontSize: 15, fontWeight: '700', color: colors.textPrimary },
+  // ---- Tipping point styles ----
+  tippingBlock: {
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.lg,
+    backgroundColor: colors.surface,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+  },
+  tippingTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: spacing.sm,
+  },
+  tippingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  tippingDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  tippingLabel: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    flex: 1,
+  },
+  tippingValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  multiTipping: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  multiTippingText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginLeft: 6,
+    flex: 1,
+  },
+
   multiSaveButton: {
     borderRadius: radii.sm,
     paddingVertical: 10,
