@@ -54,6 +54,7 @@ export default function HomeScreen({ navigation }) {
   const [income, setIncome] = useState('');
   const [amount, setAmount] = useState('');
   const [isMonthlyPayment, setIsMonthlyPayment] = useState(false);
+  const [isAnnualIncome, setIsAnnualIncome] = useState(false);
   const [error, setError] = useState('');
   const [productUrl, setProductUrl] = useState('');
   const [isFetching, setIsFetching] = useState(false);
@@ -84,12 +85,15 @@ export default function HomeScreen({ navigation }) {
     setError('');
 
     // Strip commas so "4,500" parses correctly
-    const monthlyIncome = parseFloat(income.replace(/,/g, ''));
+    const rawIncome = parseFloat(income.replace(/,/g, ''));
     const purchaseAmount = parseFloat(amount.replace(/,/g, ''));
 
+    // Convert annual → monthly if needed
+    const monthlyIncome = isAnnualIncome ? rawIncome / 12 : rawIncome;
+
     // Validate inputs before running the calculation
-    if (!monthlyIncome || monthlyIncome <= 0) {
-      setError('Please enter your monthly take-home income.');
+    if (!rawIncome || rawIncome <= 0) {
+      setError(`Please enter your ${isAnnualIncome ? 'annual' : 'monthly'} take-home income.`);
       return;
     }
     if (!purchaseAmount || purchaseAmount <= 0) {
@@ -168,12 +172,32 @@ export default function HomeScreen({ navigation }) {
           </ScrollView>
 
           {/* --- Income input card --- */}
-          <Text style={styles.label}>Monthly take-home income</Text>
+          <View style={styles.labelRow}>
+            <Text style={styles.label}>Take-home income</Text>
+            <View style={styles.incomePeriodToggle}>
+              <TouchableOpacity
+                style={[styles.periodOption, !isAnnualIncome && styles.periodOptionActive]}
+                onPress={() => setIsAnnualIncome(false)}
+              >
+                <Text style={[styles.periodText, !isAnnualIncome && styles.periodTextActive]}>
+                  Monthly
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.periodOption, isAnnualIncome && styles.periodOptionActive]}
+                onPress={() => setIsAnnualIncome(true)}
+              >
+                <Text style={[styles.periodText, isAnnualIncome && styles.periodTextActive]}>
+                  Annual
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
           <View style={[styles.inputCard, incomeFocused && styles.inputCardFocused]}>
             <Text style={styles.prefix}>{currency.symbol}</Text>
             <TextInput
               style={styles.input}
-              placeholder="e.g. 4,500"
+              placeholder={isAnnualIncome ? 'e.g. 54,000' : 'e.g. 4,500'}
               placeholderTextColor={colors.textMuted}
               keyboardType="numeric"
               value={income}
@@ -335,6 +359,38 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginBottom: spacing.sm,
     marginTop: spacing.lg,
+  },
+  // Row that holds the label + the monthly/annual mini-toggle
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: spacing.lg,
+    marginBottom: spacing.sm,
+  },
+  incomePeriodToggle: {
+    flexDirection: 'row',
+    backgroundColor: colors.surface,
+    borderRadius: radii.pill,
+    padding: 2,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  periodOption: {
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: radii.pill,
+  },
+  periodOptionActive: {
+    backgroundColor: colors.teal,
+  },
+  periodText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textMuted,
+  },
+  periodTextActive: {
+    color: '#0F0F0F',
   },
   // Currency picker row
   currencyRow: {
