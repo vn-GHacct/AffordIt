@@ -26,15 +26,15 @@ export function getVerdict(monthlyIncome, purchaseAmount, isMonthlyPayment) {
 
   if (impactRatio < 0.1) {
     verdict = 'You can handle this';
-    color = '#22C55E'; // green
+    color = '#00C48C'; // green
     emoji = '✅';
   } else if (impactRatio <= 0.2) {
     verdict = 'This is a stretch';
-    color = '#EAB308'; // yellow
+    color = '#FFB547'; // yellow
     emoji = '⚠️';
   } else {
     verdict = 'This will hurt';
-    color = '#EF4444'; // red
+    color = '#FF6B6B'; // red
     emoji = '🚫';
   }
 
@@ -67,10 +67,19 @@ function getDisplacementText(monthlyCost) {
 }
 
 /**
- * Formats a number as a dollar string, e.g. 1234.5 → "$1,234.50"
+ * Formats a number as a currency string using the provided currency object.
+ * e.g. 1234.5 with USD → "$1,234.50", with JPY → "¥1,235"
+ *
+ * @param {number} amount
+ * @param {{ symbol: string, decimals: number }} currency - defaults to USD
  */
-export function formatCurrency(amount) {
-  return `$${amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`;
+export function formatCurrency(amount, currency = { symbol: '$', decimals: 2 }) {
+  const fixed = amount.toFixed(currency.decimals);
+  const [intPart, decPart] = fixed.split('.');
+  const withCommas = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return decPart !== undefined
+    ? `${currency.symbol}${withCommas}.${decPart}`
+    : `${currency.symbol}${withCommas}`;
 }
 
 /**

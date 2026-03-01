@@ -15,6 +15,8 @@
 import React, { useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
+import { colors, spacing, radii, typography } from '../theme';
+import { formatPercent } from '../utils/calculations';
 
 /**
  * Formats an ISO date string into a readable format like "Jan 5, 2025"
@@ -48,10 +50,13 @@ export default function SavedCard({ item, onDelete }) {
   return (
     <Swipeable ref={swipeableRef} renderRightActions={renderRightActions}>
       <View style={styles.card}>
-        {/* Left: big emoji */}
-        <Text style={styles.emoji}>{item.emoji}</Text>
+        {/* Left: colored verdict dot + emoji */}
+        <View style={styles.leftSection}>
+          <View style={[styles.verdictDot, { backgroundColor: item.color }]} />
+          <Text style={styles.emoji}>{item.emoji}</Text>
+        </View>
 
-        {/* Middle: label and date */}
+        {/* Center: label + date */}
         <View style={styles.info}>
           <Text style={styles.label} numberOfLines={1}>
             {item.label}
@@ -59,8 +64,16 @@ export default function SavedCard({ item, onDelete }) {
           <Text style={styles.date}>{formatDate(item.savedAt)}</Text>
         </View>
 
-        {/* Right: monthly cost */}
-        <Text style={styles.cost}>${item.monthlyCost.toFixed(2)}/mo</Text>
+        {/* Right: monthly cost + impact ratio */}
+        <View style={styles.rightSection}>
+          <Text style={styles.cost}>
+            {item.currency?.symbol ?? '$'}
+            {item.monthlyCost.toFixed(item.currency?.decimals ?? 2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}/mo
+          </Text>
+          <Text style={styles.impact}>
+            {item.impactRatio != null ? formatPercent(item.impactRatio) : ''}
+          </Text>
+        </View>
       </View>
     </Swipeable>
   );
@@ -70,54 +83,66 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    marginHorizontal: 16,
+    backgroundColor: colors.surface,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    marginHorizontal: spacing.md,
     marginVertical: 5,
-    borderRadius: 14,
-    // Subtle card shadow
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  leftSection: {
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  verdictDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginBottom: 4,
   },
   emoji: {
-    fontSize: 28,
-    marginRight: 14,
+    fontSize: 24,
   },
   info: {
     flex: 1,
-    marginRight: 8,
+    marginRight: spacing.sm,
   },
   label: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#111',
+    ...typography.label,
+    color: colors.textPrimary,
   },
   date: {
-    fontSize: 12,
-    color: '#aaa',
+    ...typography.caption,
+    color: colors.textSecondary,
     marginTop: 3,
+  },
+  rightSection: {
+    alignItems: 'flex-end',
   },
   cost: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#444',
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  impact: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginTop: 3,
   },
   // The red area revealed on swipe
   deleteButton: {
-    backgroundColor: '#EF4444',
+    backgroundColor: colors.danger,
     justifyContent: 'center',
     alignItems: 'center',
     width: 80,
     marginVertical: 5,
-    marginRight: 16,
-    borderRadius: 14,
+    marginRight: spacing.md,
+    borderRadius: radii.lg,
   },
   deleteText: {
-    color: '#fff',
+    color: colors.white,
     fontWeight: '700',
     fontSize: 13,
   },

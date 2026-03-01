@@ -18,6 +18,14 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
+import PressableScale from './PressableScale';
+import { colors, spacing, radii, typography } from '../theme';
+
+const FEATURES = [
+  'Unlimited affordability checks',
+  'Save and compare past results',
+  'URL price fetcher — no manual entry',
+];
 
 export default function PaywallModal({ visible, onDismiss }) {
   const handleUnlock = () => {
@@ -29,10 +37,16 @@ export default function PaywallModal({ visible, onDismiss }) {
     <Modal visible={visible} transparent animationType="slide">
       {/* Dark semi-transparent backdrop */}
       <View style={styles.overlay}>
-        {/* The white card that slides up from the bottom */}
+        {/* The dark card that slides up from the bottom */}
         <View style={styles.sheet}>
-          {/* Small handle bar at top (common pattern for bottom sheets) */}
+          {/* Teal top accent border */}
+          <View style={styles.topAccent} />
+
+          {/* Handle bar */}
           <View style={styles.handle} />
+
+          {/* Lock emoji */}
+          <Text style={styles.lockEmoji}>🔓</Text>
 
           <Text style={styles.headline}>Unlock unlimited checks</Text>
 
@@ -41,14 +55,26 @@ export default function PaywallModal({ visible, onDismiss }) {
             making smart money decisions — just once, no subscription.
           </Text>
 
-          <Text style={styles.price}>$6.99 one time</Text>
+          {/* Feature list with teal checkmarks */}
+          <View style={styles.featureList}>
+            {FEATURES.map((feature) => (
+              <View key={feature} style={styles.featureRow}>
+                <Text style={styles.checkmark}>✓</Text>
+                <Text style={styles.featureText}>{feature}</Text>
+              </View>
+            ))}
+          </View>
 
-          <TouchableOpacity style={styles.unlockButton} onPress={handleUnlock}>
+          {/* Hero price */}
+          <Text style={styles.price}>$6.99</Text>
+          <Text style={styles.priceCaption}>one-time payment</Text>
+
+          <PressableScale style={styles.unlockButton} onPress={handleUnlock}>
             <Text style={styles.unlockText}>Unlock Now</Text>
-          </TouchableOpacity>
+          </PressableScale>
 
           <TouchableOpacity style={styles.dismissButton} onPress={onDismiss}>
-            <Text style={styles.dismissText}>Maybe Later</Text>
+            <Text style={styles.dismissText}>Maybe later</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -59,55 +85,92 @@ export default function PaywallModal({ visible, onDismiss }) {
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end', // anchor sheet to the bottom
+    backgroundColor: colors.overlay,
+    justifyContent: 'flex-end',
   },
   sheet: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    paddingHorizontal: 28,
-    paddingBottom: 48,
-    paddingTop: 16,
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radii.xl,
+    borderTopRightRadius: radii.xl,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.xxl,
+    paddingTop: 0,
     alignItems: 'center',
+    overflow: 'hidden',
+  },
+  // Teal accent line at very top of sheet
+  topAccent: {
+    width: '100%',
+    height: 3,
+    backgroundColor: colors.teal,
+    marginBottom: spacing.md,
   },
   handle: {
     width: 40,
     height: 4,
-    backgroundColor: '#E0E0E0',
+    backgroundColor: colors.border,
     borderRadius: 2,
-    marginBottom: 24,
+    marginBottom: spacing.lg,
+  },
+  lockEmoji: {
+    fontSize: 48,
+    marginBottom: spacing.md,
   },
   headline: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#111',
-    marginBottom: 12,
+    ...typography.heading,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
     textAlign: 'center',
   },
   subtext: {
     fontSize: 15,
-    color: '#666',
+    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 23,
-    marginBottom: 24,
+    marginBottom: spacing.lg,
+  },
+  featureList: {
+    alignSelf: 'stretch',
+    marginBottom: spacing.lg,
+  },
+  featureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  checkmark: {
+    color: colors.teal,
+    fontWeight: '700',
+    fontSize: 16,
+    marginRight: 10,
+    width: 20,
+    textAlign: 'center',
+  },
+  featureText: {
+    fontSize: 15,
+    color: colors.textPrimary,
+    flex: 1,
   },
   price: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#111',
-    marginBottom: 24,
+    ...typography.price,
+    color: colors.textPrimary,
+    marginBottom: 4,
+  },
+  priceCaption: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginBottom: spacing.lg,
   },
   unlockButton: {
-    backgroundColor: '#111',
-    borderRadius: 14,
+    backgroundColor: colors.teal,
+    borderRadius: radii.md,
     paddingVertical: 18,
     width: '100%',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   unlockText: {
-    color: '#fff',
+    color: '#0F0F0F',
     fontSize: 16,
     fontWeight: '700',
   },
@@ -115,7 +178,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   dismissText: {
-    color: '#aaa',
+    color: colors.textMuted,
     fontSize: 14,
   },
 });

@@ -16,6 +16,7 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { StatusBar } from 'expo-status-bar';
 
 import HomeScreen from './screens/HomeScreen';
 import ResultScreen from './screens/ResultScreen';
@@ -28,6 +29,7 @@ export default function App() {
   return (
     // GestureHandlerRootView must wrap the entire app for swipe gestures to work
     <GestureHandlerRootView style={{ flex: 1 }}>
+      <StatusBar style="light" />
       <NavigationContainer>
         <Stack.Navigator
           initialRouteName="Home"

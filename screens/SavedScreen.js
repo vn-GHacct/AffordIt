@@ -20,6 +20,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import SavedCard from '../components/SavedCard';
 import { getCalculations, deleteCalculation } from '../utils/storage';
+import { colors, spacing, radii, typography } from '../theme';
 
 export default function SavedScreen({ navigation }) {
   const [calculations, setCalculations] = useState([]);
@@ -50,18 +51,23 @@ export default function SavedScreen({ navigation }) {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}>
           <Text style={styles.backText}>← Back</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Past Calculations</Text>
+        <Text style={styles.title}>Past Checks</Text>
         <View style={styles.backPlaceholder} />
       </View>
+
+      {/* Bottom border separator under header */}
+      <View style={styles.headerDivider} />
 
       {calculations.length === 0 ? (
         // Empty state shown when no calculations have been saved yet
         <View style={styles.empty}>
-          <Text style={styles.emptyEmoji}>📋</Text>
-          <Text style={styles.emptyTitle}>No saved calculations yet</Text>
-          <Text style={styles.emptySubtext}>
-            After running a check, tap "Save this calculation" to keep it here.
-          </Text>
+          <View style={styles.emptyBox}>
+            <Text style={styles.emptyEmoji}>📋</Text>
+            <Text style={styles.emptyTitle}>No checks saved yet</Text>
+            <Text style={styles.emptySubtext}>
+              After running a check, tap "Save this" to keep it here.
+            </Text>
+          </View>
         </View>
       ) : (
         <FlatList
@@ -71,7 +77,6 @@ export default function SavedScreen({ navigation }) {
             <SavedCard item={item} onDelete={handleDelete} />
           )}
           contentContainerStyle={styles.list}
-          // Hint text at the bottom
           ListFooterComponent={
             <Text style={styles.swipeHint}>Swipe left on a card to delete</Text>
           }
@@ -84,16 +89,21 @@ export default function SavedScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: colors.bg,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 12,
-    backgroundColor: '#F5F5F5',
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.md,
+    backgroundColor: colors.bg,
+  },
+  headerDivider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginHorizontal: 0,
   },
   back: {
     paddingVertical: 4,
@@ -101,49 +111,58 @@ const styles = StyleSheet.create({
     width: 80,
   },
   backText: {
-    color: '#555',
+    color: colors.teal,
     fontSize: 15,
+    fontWeight: '600',
   },
   backPlaceholder: {
     width: 80,
   },
   title: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#111',
+    ...typography.subheading,
+    color: colors.textPrimary,
   },
   list: {
-    paddingTop: 8,
-    paddingBottom: 40,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xxl,
   },
   swipeHint: {
     textAlign: 'center',
-    color: '#bbb',
+    color: colors.textMuted,
     fontSize: 12,
-    marginTop: 16,
+    marginTop: spacing.md,
   },
   // Empty state
   empty: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 40,
-    paddingBottom: 60,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.xxl,
+  },
+  emptyBox: {
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: radii.xl,
+    paddingVertical: spacing.xxl,
+    paddingHorizontal: spacing.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+    width: '100%',
   },
   emptyEmoji: {
     fontSize: 48,
-    marginBottom: 16,
+    marginBottom: spacing.md,
   },
   emptyTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#333',
-    marginBottom: 8,
+    ...typography.subheading,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
     textAlign: 'center',
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#aaa',
+    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 21,
   },

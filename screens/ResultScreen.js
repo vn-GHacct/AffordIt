@@ -10,19 +10,22 @@
  *  - Showing the PaywallModal if the user has exceeded 3 free calculations
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
   ScrollView,
   SafeAreaView,
+  Animated,
 } from 'react-native';
 import VerdictBanner from '../components/VerdictBanner';
 import PaywallModal from '../components/PaywallModal';
+import PressableScale from '../components/PressableScale';
 import { saveCalculation } from '../utils/storage';
 import { formatCurrency, formatPercent } from '../utils/calculations';
+import { DEFAULT_CURRENCY } from '../utils/currencies';
+import { colors, spacing, radii, typography } from '../theme';
 
 export default function ResultScreen({ route, navigation }) {
   // Everything we need was passed in from HomeScreen
@@ -37,12 +40,28 @@ export default function ResultScreen({ route, navigation }) {
     purchaseAmount,
     isMonthlyPayment,
     usageCount,
+    currency = DEFAULT_CURRENCY,
   } = route.params;
 
   const [saved, setSaved] = useState(false);
 
   // Show the paywall if this was their 4th+ calculation (usageCount > 3)
   const [showPaywall, setShowPaywall] = useState(usageCount > 3);
+
+  // Stagger animation values for stat1 → stat2 → displacement → buttons
+  const stat1Opacity = useRef(new Animated.Value(0)).current;
+  const stat2Opacity = useRef(new Animated.Value(0)).current;
+  const displacementOpacity = useRef(new Animated.Value(0)).current;
+  const buttonsOpacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.stagger(150, [
+      Animated.timing(stat1Opacity, { toValue: 1, duration: 300, useNativeDriver: true }),
+      Animated.timing(stat2Opacity, { toValue: 1, duration: 300, useNativeDriver: true }),
+      Animated.timing(displacementOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
+      Animated.timing(buttonsOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
+    ]).start();
+  }, []);
 
   const handleSave = async () => {
     // Build a human-readable label for the saved card
@@ -57,48 +76,59 @@ export default function ResultScreen({ route, navigation }) {
       monthlyCost,
       impactRatio,
       label,
+      currency,
     });
 
     setSaved(true);
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+    <SafeAreaView style={styles.safe}>
+      {/* ScrollView has no horizontal padding — VerdictBanner spans full width */}
       <ScrollView contentContainerStyle={styles.container}>
-        {/* The big colored verdict banner */}
+        {/* Full-width verdict band */}
         <VerdictBanner emoji={emoji} verdict={verdict} color={color} />
 
-        {/* Stats breakdown card */}
-        <View style={styles.statsCard}>
-          <StatRow label="Monthly cost" value={formatCurrency(monthlyCost)} />
-          <StatRow
-            label="% of your income"
-            value={formatPercent(impactRatio)}
-            isLast
-          />
+        {/* Two stat cards side by side */}
+        <View style={styles.statsRow}>
+          <Animated.View style={[styles.statCard, { opacity: stat1Opacity }]}>
+            <Text style={styles.statLabel}>Monthly cost</Text>
+            <Text style={styles.statValue}>{formatCurrency(monthlyCost, currency)}</Text>
+          </Animated.View>
+
+          <Animated.View style={[styles.statCard, { opacity: stat2Opacity }]}>
+            <Text style={styles.statLabel}>% of income</Text>
+            <Text style={[styles.statValue, { color }]}>{formatPercent(impactRatio)}</Text>
+          </Animated.View>
         </View>
 
-        {/* Plain-English displacement sentence */}
-        <Text style={styles.displacement}>{displacementText}</Text>
+        {/* Quote-style displacement block */}
+        <Animated.View style={[styles.quoteBlock, { opacity: displacementOpacity }]}>
+          <View style={[styles.quoteBorder, { backgroundColor: colors.teal }]} />
+          <Text style={styles.quoteText}>{displacementText}</Text>
+        </Animated.View>
 
-        {/* Save button — disabled after saving to prevent duplicates */}
-        <TouchableOpacity
-          style={[styles.button, saved && styles.buttonSaved]}
-          onPress={handleSave}
-          disabled={saved}
-        >
-          <Text style={styles.buttonText}>
-            {saved ? 'Saved ✓' : 'Save this calculation'}
-          </Text>
-        </TouchableOpacity>
+        {/* Buttons */}
+        <Animated.View style={[styles.buttonGroup, { opacity: buttonsOpacity }]}>
+          {/* Save button — outlined teal, turns solid green when saved */}
+          <PressableScale
+            style={[styles.saveButton, saved && styles.saveButtonSaved]}
+            onPress={handleSave}
+            disabled={saved}
+          >
+            <Text style={[styles.saveButtonText, saved && styles.saveButtonTextSaved]}>
+              {saved ? 'Saved ✓' : 'Save this'}
+            </Text>
+          </PressableScale>
 
-        {/* Go back to HomeScreen */}
-        <TouchableOpacity
-          style={styles.secondaryButton}
-          onPress={() => navigation.navigate('Home')}
-        >
-          <Text style={styles.secondaryText}>Check another</Text>
-        </TouchableOpacity>
+          {/* Check another — filled teal */}
+          <PressableScale
+            style={styles.checkButton}
+            onPress={() => navigation.navigate('Home')}
+          >
+            <Text style={styles.checkButtonText}>Check another</Text>
+          </PressableScale>
+        </Animated.View>
       </ScrollView>
 
       {/* Paywall modal — slides up over the result after 3 free uses */}
@@ -110,94 +140,102 @@ export default function ResultScreen({ route, navigation }) {
   );
 }
 
-/**
- * Small helper component for each row in the stats card.
- * Defined here (not in a separate file) because it's only used in this screen.
- */
-function StatRow({ label, value, isLast }) {
-  return (
-    <View style={[styles.row, isLast && styles.rowLast]}>
-      <Text style={styles.rowLabel}>{label}</Text>
-      <Text style={styles.rowValue}>{value}</Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
+  safe: {
+    flex: 1,
+    backgroundColor: colors.bg,
+  },
+  // No horizontal padding here — banner spans full width
   container: {
     flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingTop: 36,
-    paddingBottom: 48,
-    backgroundColor: '#fff',
+    paddingBottom: spacing.xxl,
+    backgroundColor: colors.bg,
   },
-  statsCard: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    paddingHorizontal: 20,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: '#F0F0F0',
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
-  },
-  row: {
+  // Two stat cards side by side
+  statsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: 16,
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.lg,
+    marginTop: spacing.sm,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
     alignItems: 'center',
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#EFEFEF',
   },
-  rowLast: {
-    borderBottomWidth: 0,
-  },
-  rowLabel: {
-    fontSize: 15,
-    color: '#888',
-  },
-  rowValue: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#111',
-  },
-  displacement: {
-    fontSize: 17,
-    color: '#444',
-    lineHeight: 27,
+  statLabel: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
     textAlign: 'center',
-    marginBottom: 36,
-    paddingHorizontal: 8,
   },
-  button: {
-    backgroundColor: '#111',
-    borderRadius: 18,
-    paddingVertical: 20,
+  statValue: {
+    ...typography.subheading,
+    color: colors.textPrimary,
+    textAlign: 'center',
+  },
+  // Quote-style displacement block
+  quoteBlock: {
+    flexDirection: 'row',
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.xl,
+    backgroundColor: colors.surface,
+    borderRadius: radii.md,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  quoteBorder: {
+    width: 3,
+  },
+  quoteText: {
+    flex: 1,
+    fontSize: 15,
+    color: colors.textSecondary,
+    lineHeight: 24,
+    fontStyle: 'italic',
+    padding: spacing.md,
+  },
+  // Button group
+  buttonGroup: {
+    paddingHorizontal: spacing.lg,
+    gap: 12,
+  },
+  // Outlined teal save button
+  saveButton: {
+    borderRadius: radii.md,
+    paddingVertical: 16,
     alignItems: 'center',
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
+    borderWidth: 1.5,
+    borderColor: colors.teal,
   },
-  buttonSaved: {
-    backgroundColor: '#22C55E', // turns green when saved
+  saveButtonSaved: {
+    backgroundColor: colors.teal,
+    borderColor: colors.teal,
   },
-  buttonText: {
-    color: '#fff',
+  saveButtonText: {
+    color: colors.teal,
     fontSize: 16,
     fontWeight: '700',
   },
-  secondaryButton: {
-    paddingVertical: 14,
+  saveButtonTextSaved: {
+    color: '#0F0F0F',
+  },
+  // Filled teal check-another button
+  checkButton: {
+    backgroundColor: colors.teal,
+    borderRadius: radii.md,
+    paddingVertical: 16,
     alignItems: 'center',
   },
-  secondaryText: {
-    color: '#aaa',
-    fontSize: 15,
+  checkButtonText: {
+    color: '#0F0F0F',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });

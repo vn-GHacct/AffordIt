@@ -5,36 +5,57 @@
  * It receives the emoji, text, and background color as props
  * so the same component works for all three verdict states.
  *
+ * Full-width — no horizontal margin, no border radius.
+ * Handles its own fade + translateY entrance animation.
+ *
  * Props:
  *   emoji   {string}  - e.g. "✅", "⚠️", "🚫"
  *   verdict {string}  - e.g. "You can handle this"
- *   color   {string}  - hex color for the background, e.g. "#22C55E"
+ *   color   {string}  - hex color for the background, e.g. "#00C48C"
  */
 
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Animated } from 'react-native';
 
 export default function VerdictBanner({ emoji, verdict, color }) {
+  const opacity = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(20)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
   return (
-    <View style={[styles.banner, { backgroundColor: color }]}>
+    <Animated.View
+      style={[
+        styles.banner,
+        { backgroundColor: color, opacity, transform: [{ translateY }] },
+      ]}
+    >
       <Text style={styles.emoji}>{emoji}</Text>
       <Text style={styles.verdictText}>{verdict}</Text>
-    </View>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   banner: {
-    borderRadius: 24,
+    // Full-width: no borderRadius, no horizontal margin
     paddingVertical: 44,
     paddingHorizontal: 28,
     alignItems: 'center',
-    marginBottom: 28,
-    shadowColor: '#000',
-    shadowOpacity: 0.12,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 5,
+    marginBottom: 24,
   },
   emoji: {
     fontSize: 56,
