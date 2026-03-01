@@ -36,15 +36,23 @@ export const colors = {
   transparent: 'transparent',
 };
 
+export const fonts = {
+  regular:  'Inter_400Regular',
+  medium:   'Inter_500Medium',
+  semibold: 'Inter_600SemiBold',
+  bold:     'Inter_700Bold',
+};
+
 export const typography = {
-  hero: { fontSize: 48, fontWeight: '800', letterSpacing: -1.5 },
-  title: { fontSize: 28, fontWeight: '700', letterSpacing: -0.5 },
-  heading: { fontSize: 22, fontWeight: '700' },
-  subheading: { fontSize: 18, fontWeight: '700' },
-  body: { fontSize: 16, fontWeight: '400', lineHeight: 24 },
-  label: { fontSize: 14, fontWeight: '600' },
-  caption: { fontSize: 12, fontWeight: '400' },
-  price: { fontSize: 36, fontWeight: '800' },
+  hero:       { fontFamily: 'Inter_700Bold',     fontSize: 42, letterSpacing: -1.5 },
+  title:      { fontFamily: 'Inter_700Bold',     fontSize: 28, letterSpacing: -0.5 },
+  heading:    { fontFamily: 'Inter_700Bold',     fontSize: 22 },
+  subheading: { fontFamily: 'Inter_600SemiBold', fontSize: 18 },
+  body:       { fontFamily: 'Inter_400Regular',  fontSize: 16, lineHeight: 24 },
+  label:      { fontFamily: 'Inter_600SemiBold', fontSize: 11, letterSpacing: 0.6, textTransform: 'uppercase' },
+  caption:    { fontFamily: 'Inter_400Regular',  fontSize: 12 },
+  price:      { fontFamily: 'Inter_700Bold',     fontSize: 36 },
+  numeric:    { fontFamily: 'Inter_700Bold',     fontSize: 56, letterSpacing: -2 },
 };
 
 // 8-px grid

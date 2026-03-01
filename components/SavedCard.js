@@ -15,7 +15,7 @@
 import React, { useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
-import { colors, spacing, radii, typography } from '../theme';
+import { colors, fonts, spacing, radii } from '../theme';
 import { formatPercent } from '../utils/calculations';
 
 /**
@@ -87,7 +87,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.md,
     marginHorizontal: spacing.md,
-    marginVertical: 5,
+    marginVertical: 4,
     borderRadius: radii.lg,
     borderWidth: 1,
     borderColor: colors.border,
@@ -103,47 +103,49 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   emoji: {
-    fontSize: 24,
+    fontSize: 22,
   },
   info: {
     flex: 1,
     marginRight: spacing.sm,
   },
   label: {
-    ...typography.label,
+    fontFamily: fonts.semibold,
+    fontSize: 14,
     color: colors.textPrimary,
   },
   date: {
-    ...typography.caption,
-    color: colors.textSecondary,
+    fontFamily: fonts.regular,
+    fontSize: 12,
+    color: colors.textMuted,
     marginTop: 3,
   },
   rightSection: {
     alignItems: 'flex-end',
   },
   cost: {
+    fontFamily: fonts.bold,
     fontSize: 14,
-    fontWeight: '700',
     color: colors.textPrimary,
   },
   impact: {
-    ...typography.caption,
-    color: colors.textSecondary,
+    fontFamily: fonts.regular,
+    fontSize: 12,
+    color: colors.textMuted,
     marginTop: 3,
   },
-  // The red area revealed on swipe
   deleteButton: {
     backgroundColor: colors.danger,
     justifyContent: 'center',
     alignItems: 'center',
-    width: 80,
-    marginVertical: 5,
+    width: 76,
+    marginVertical: 4,
     marginRight: spacing.md,
     borderRadius: radii.lg,
   },
   deleteText: {
+    fontFamily: fonts.semibold,
     color: colors.white,
-    fontWeight: '700',
     fontSize: 13,
   },
 });

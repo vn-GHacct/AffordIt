@@ -1,12 +1,8 @@
 /**
  * ResultScreen.js
  *
- * Displays verdict(s) after the user taps "Check It" on HomeScreen.
- * Receives a `results` array — one item for a single check, up to 5 for
- * a multi-product comparison.
- *
- * Single product  → Full-screen layout with VerdictBanner + stat cards + quote block
- * Multiple products → Stacked compact verdict cards, one per product
+ * Single product  → Impact-% hero + stat row + rationale + tipping point + actions
+ * Multiple products → Stacked verdict cards, one per product
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -16,15 +12,15 @@ import {
   StyleSheet,
   ScrollView,
   SafeAreaView,
+  TouchableOpacity,
   Animated,
 } from 'react-native';
-import VerdictBanner from '../components/VerdictBanner';
 import PaywallModal from '../components/PaywallModal';
 import PressableScale from '../components/PressableScale';
 import { saveCalculation } from '../utils/storage';
 import { formatCurrency, formatPercent } from '../utils/calculations';
 import { DEFAULT_CURRENCY } from '../utils/currencies';
-import { colors, spacing, radii, typography } from '../theme';
+import { colors, fonts, spacing, radii } from '../theme';
 
 export default function ResultScreen({ route, navigation }) {
   const { results, monthlyIncome, usageCount, currency = DEFAULT_CURRENCY } = route.params;
@@ -34,27 +30,27 @@ export default function ResultScreen({ route, navigation }) {
 
   const isSingle = results.length === 1;
 
-  // Single-product animations (5-step stagger)
-  const stat1Anim = useRef(new Animated.Value(0)).current;
-  const stat2Anim = useRef(new Animated.Value(0)).current;
-  const displacementAnim = useRef(new Animated.Value(0)).current;
-  const tippingAnim = useRef(new Animated.Value(0)).current;
-  const buttonsAnim = useRef(new Animated.Value(0)).current;
+  // Single: stagger 5 sections
+  const heroAnim       = useRef(new Animated.Value(0)).current;
+  const statsAnim      = useRef(new Animated.Value(0)).current;
+  const rationaleAnim  = useRef(new Animated.Value(0)).current;
+  const tippingAnim    = useRef(new Animated.Value(0)).current;
+  const buttonsAnim    = useRef(new Animated.Value(0)).current;
 
-  // Multi-product animations (one per card)
+  // Multi: one per card
   const cardAnims = useRef(results.map(() => new Animated.Value(0))).current;
 
   useEffect(() => {
     if (isSingle) {
-      Animated.stagger(120, [
-        Animated.timing(stat1Anim, { toValue: 1, duration: 300, useNativeDriver: true }),
-        Animated.timing(stat2Anim, { toValue: 1, duration: 300, useNativeDriver: true }),
-        Animated.timing(displacementAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
-        Animated.timing(tippingAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
-        Animated.timing(buttonsAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+      Animated.stagger(100, [
+        Animated.timing(heroAnim,      { toValue: 1, duration: 350, useNativeDriver: true }),
+        Animated.timing(statsAnim,     { toValue: 1, duration: 300, useNativeDriver: true }),
+        Animated.timing(rationaleAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+        Animated.timing(tippingAnim,   { toValue: 1, duration: 300, useNativeDriver: true }),
+        Animated.timing(buttonsAnim,   { toValue: 1, duration: 300, useNativeDriver: true }),
       ]).start();
     } else {
-      Animated.stagger(100,
+      Animated.stagger(80,
         cardAnims.map(anim =>
           Animated.timing(anim, { toValue: 1, duration: 300, useNativeDriver: true })
         )
@@ -77,165 +73,175 @@ export default function ResultScreen({ route, navigation }) {
   };
 
   // -------------------------------------------------------------------------
-  // Single-product layout — identical to the original design
+  // Single-product layout
   // -------------------------------------------------------------------------
   if (isSingle) {
     const result = results[0];
     return (
       <SafeAreaView style={styles.safe}>
-        <ScrollView contentContainerStyle={styles.container}>
-          <VerdictBanner emoji={result.emoji} verdict={result.verdict} color={result.color} />
+        <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
 
-          <View style={styles.statsRow}>
-            <Animated.View style={[styles.statCard, { opacity: stat1Anim }]}>
+          {/* Back */}
+          <TouchableOpacity style={styles.back} onPress={() => navigation.navigate('Home')}>
+            <Text style={styles.backText}>← Back</Text>
+          </TouchableOpacity>
+
+          {/* Verdict hero */}
+          <Animated.View style={[styles.hero, { opacity: heroAnim }]}>
+            <Text style={[styles.heroPercent, { color: result.color }]}>
+              {formatPercent(result.impactRatio)}
+            </Text>
+            <Text style={styles.heroLabel}>of your monthly income</Text>
+            <Text style={styles.heroVerdict}>{result.verdict}</Text>
+          </Animated.View>
+
+          <View style={styles.divider} />
+
+          {/* Stat row */}
+          <Animated.View style={[styles.statsRow, { opacity: statsAnim }]}>
+            <View style={styles.stat}>
               <Text style={styles.statLabel}>Monthly cost</Text>
               <Text style={styles.statValue}>{formatCurrency(result.monthlyCost, currency)}</Text>
-            </Animated.View>
-            <Animated.View style={[styles.statCard, { opacity: stat2Anim }]}>
-              <Text style={styles.statLabel}>% of income</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.stat}>
+              <Text style={styles.statLabel}>Income impact</Text>
               <Text style={[styles.statValue, { color: result.color }]}>
                 {formatPercent(result.impactRatio)}
               </Text>
-            </Animated.View>
-          </View>
-
-          <Animated.View style={[styles.quoteBlock, { opacity: displacementAnim }]}>
-            <View style={[styles.quoteBorder, { backgroundColor: result.color }]} />
-            <View style={styles.quoteContent}>
-              <Text style={styles.quoteLabel}>Why this verdict</Text>
-              <Text style={styles.quoteText}>{result.rationaleText}</Text>
-              <Text style={styles.quoteContext}>{result.displacementText}</Text>
             </View>
           </Animated.View>
 
-          <Animated.View style={[styles.tippingBlock, { opacity: tippingAnim }]}>
-            <Text style={styles.tippingTitle}>Tipping point</Text>
+          <View style={styles.divider} />
+
+          {/* Rationale */}
+          <Animated.View style={[styles.section, { opacity: rationaleAnim }]}>
+            <Text style={styles.sectionLabel}>Why this verdict</Text>
+            <Text style={styles.rationaleText}>{result.rationaleText}</Text>
+            <Text style={styles.rationaleContext}>{result.displacementText}</Text>
+          </Animated.View>
+
+          <View style={styles.divider} />
+
+          {/* Tipping point */}
+          <Animated.View style={[styles.section, { opacity: tippingAnim }]}>
+            <Text style={styles.sectionLabel}>Tipping point</Text>
             <View style={styles.tippingRow}>
-              <View style={[styles.tippingDot, { backgroundColor: '#00C48C' }]} />
-              <Text style={styles.tippingLabel}>Comfortable</Text>
-              <Text style={styles.tippingValue}>
+              <View style={styles.tippingLeft}>
+                <View style={[styles.tippingDot, { backgroundColor: colors.success }]} />
+                <Text style={styles.tippingRowLabel}>Comfortable</Text>
+              </View>
+              <Text style={styles.tippingRowValue}>
                 {formatCurrency(result.tippingPoints.comfortable, currency)} or less
               </Text>
             </View>
             <View style={styles.tippingRow}>
-              <View style={[styles.tippingDot, { backgroundColor: '#FFB547' }]} />
-              <Text style={styles.tippingLabel}>Max stretch</Text>
-              <Text style={styles.tippingValue}>
+              <View style={styles.tippingLeft}>
+                <View style={[styles.tippingDot, { backgroundColor: colors.warning }]} />
+                <Text style={styles.tippingRowLabel}>Max stretch</Text>
+              </View>
+              <Text style={styles.tippingRowValue}>
                 {formatCurrency(result.tippingPoints.stretch, currency)} or less
               </Text>
             </View>
           </Animated.View>
 
-          <Animated.View style={[styles.buttonGroup, { opacity: buttonsAnim }]}>
+          <View style={styles.divider} />
+
+          {/* Actions */}
+          <Animated.View style={[styles.actions, { opacity: buttonsAnim }]}>
             <PressableScale
-              style={[styles.saveButton, savedIds.has(0) && styles.saveButtonSaved]}
+              style={[styles.btnPrimary, savedIds.has(0) && styles.btnPrimaryDone]}
               onPress={() => handleSave(result, 0)}
               disabled={savedIds.has(0)}
             >
-              <Text style={[styles.saveButtonText, savedIds.has(0) && styles.saveButtonTextSaved]}>
-                {savedIds.has(0) ? 'Saved ✓' : 'Save this'}
+              <Text style={[styles.btnPrimaryText, savedIds.has(0) && styles.btnPrimaryTextDone]}>
+                {savedIds.has(0) ? 'Saved ✓' : 'Save this check'}
               </Text>
             </PressableScale>
-            <PressableScale
-              style={styles.checkButton}
-              onPress={() => navigation.navigate('Home')}
-            >
-              <Text style={styles.checkButtonText}>Check another</Text>
+            <PressableScale style={styles.btnSecondary} onPress={() => navigation.navigate('Home')}>
+              <Text style={styles.btnSecondaryText}>Check another</Text>
             </PressableScale>
           </Animated.View>
-        </ScrollView>
 
+        </ScrollView>
         <PaywallModal visible={showPaywall} onDismiss={() => setShowPaywall(false)} />
       </SafeAreaView>
     );
   }
 
   // -------------------------------------------------------------------------
-  // Multi-product layout — stacked verdict cards
+  // Multi-product layout
   // -------------------------------------------------------------------------
   return (
     <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.multiContainer}>
+      <ScrollView contentContainerStyle={styles.multiContainer} showsVerticalScrollIndicator={false}>
+
         {/* Header */}
         <View style={styles.multiHeader}>
+          <TouchableOpacity onPress={() => navigation.navigate('Home')} style={styles.back}>
+            <Text style={styles.backText}>← Back</Text>
+          </TouchableOpacity>
           <Text style={styles.multiTitle}>{results.length} products compared</Text>
           <Text style={styles.multiSubtitle}>
-            Based on {formatCurrency(monthlyIncome, currency)}/mo income
+            {formatCurrency(monthlyIncome, currency)}/mo income
           </Text>
         </View>
 
-        {/* Verdict cards */}
+        {/* Cards */}
         {results.map((result, index) => (
-          <Animated.View
-            key={index}
-            style={[styles.multiCard, { opacity: cardAnims[index] }]}
-          >
-            {/* Colored left accent */}
-            <View style={[styles.multiCardAccent, { backgroundColor: result.color }]} />
+          <Animated.View key={index} style={[styles.multiCard, { opacity: cardAnims[index] }]}>
+            <View style={[styles.multiCardBar, { backgroundColor: result.color }]} />
+            <View style={styles.multiCardContent}>
 
-            <View style={styles.multiCardBody}>
-              {/* Top row: emoji + label + verdict */}
+              {/* Top */}
               <View style={styles.multiCardTop}>
-                <Text style={styles.multiCardEmoji}>{result.emoji}</Text>
-                <View style={styles.multiCardMeta}>
-                  <Text style={styles.multiCardLabel}>Product {index + 1}</Text>
-                  <Text style={[styles.multiCardVerdict, { color: result.color }]}>
-                    {result.verdict}
-                  </Text>
+                <View style={styles.multiCardTopLeft}>
+                  <Text style={styles.multiCardIndex}>Product {index + 1}</Text>
+                  <Text style={[styles.multiCardVerdict, { color: result.color }]}>{result.verdict}</Text>
                 </View>
+                <Text style={[styles.multiCardPercent, { color: result.color }]}>
+                  {formatPercent(result.impactRatio)}
+                </Text>
               </View>
 
-              {/* Stat row */}
+              {/* Stats */}
               <View style={styles.multiCardStats}>
-                <View style={styles.multiCardStat}>
-                  <Text style={styles.multiCardStatLabel}>Monthly cost</Text>
-                  <Text style={styles.multiCardStatValue}>
-                    {formatCurrency(result.monthlyCost, currency)}
-                  </Text>
+                <View style={styles.multiStat}>
+                  <Text style={styles.multiStatLabel}>Monthly cost</Text>
+                  <Text style={styles.multiStatValue}>{formatCurrency(result.monthlyCost, currency)}</Text>
                 </View>
-                <View style={styles.multiCardDivider} />
-                <View style={styles.multiCardStat}>
-                  <Text style={styles.multiCardStatLabel}>% of income</Text>
-                  <Text style={[styles.multiCardStatValue, { color: result.color }]}>
-                    {formatPercent(result.impactRatio)}
+                <View style={styles.multiStat}>
+                  <Text style={styles.multiStatLabel}>Comfortable at</Text>
+                  <Text style={styles.multiStatValue}>
+                    {formatCurrency(result.tippingPoints.comfortable, currency)}
                   </Text>
                 </View>
               </View>
 
-              {/* Rationale short */}
-              <Text style={[styles.multiRationale, { color: result.color }]}>
-                {result.rationaleShort}
-              </Text>
+              {/* Short rationale */}
+              <Text style={styles.multiRationale}>{result.rationaleShort}</Text>
 
-              {/* Per-card save button */}
+              {/* Save */}
               <PressableScale
-                style={[
-                  styles.multiSaveButton,
-                  savedIds.has(index) && styles.multiSaveButtonSaved,
-                ]}
+                style={[styles.multiSaveBtn, savedIds.has(index) && styles.multiSaveBtnDone]}
                 onPress={() => handleSave(result, index)}
                 disabled={savedIds.has(index)}
               >
-                <Text style={[
-                  styles.multiSaveButtonText,
-                  savedIds.has(index) && styles.multiSaveButtonTextSaved,
-                ]}>
-                  {savedIds.has(index) ? 'Saved ✓' : 'Save this'}
+                <Text style={[styles.multiSaveBtnText, savedIds.has(index) && styles.multiSaveBtnTextDone]}>
+                  {savedIds.has(index) ? 'Saved ✓' : 'Save'}
                 </Text>
               </PressableScale>
+
             </View>
           </Animated.View>
         ))}
 
-        {/* Check another */}
-        <PressableScale
-          style={styles.checkButton}
-          onPress={() => navigation.navigate('Home')}
-        >
-          <Text style={styles.checkButtonText}>Check another</Text>
+        <PressableScale style={styles.btnPrimary} onPress={() => navigation.navigate('Home')}>
+          <Text style={styles.btnPrimaryText}>Check another</Text>
         </PressableScale>
-      </ScrollView>
 
+      </ScrollView>
       <PaywallModal visible={showPaywall} onDismiss={() => setShowPaywall(false)} />
     </SafeAreaView>
   );
@@ -244,88 +250,137 @@ export default function ResultScreen({ route, navigation }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
 
-  // ---- Single-product styles ----
+  // ── Single ──────────────────────────────────────────────────────────────
   container: {
     flexGrow: 1,
     paddingBottom: spacing.xxl,
     backgroundColor: colors.bg,
   },
+
+  back: { paddingHorizontal: spacing.lg, paddingTop: spacing.lg, paddingBottom: spacing.sm },
+  backText: { fontFamily: fonts.medium, fontSize: 14, color: colors.textMuted },
+
+  // Hero
+  hero: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xl,
+  },
+  heroPercent: {
+    fontFamily: fonts.bold,
+    fontSize: 72,
+    letterSpacing: -3,
+    lineHeight: 76,
+  },
+  heroLabel: {
+    fontFamily: fonts.regular,
+    fontSize: 15,
+    color: colors.textMuted,
+    marginTop: 4,
+    marginBottom: spacing.md,
+  },
+  heroVerdict: {
+    fontFamily: fonts.bold,
+    fontSize: 26,
+    color: colors.textPrimary,
+    letterSpacing: -0.5,
+  },
+
+  // Divider
+  divider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginHorizontal: spacing.lg,
+    marginVertical: spacing.lg,
+  },
+
+  // Stats
   statsRow: {
     flexDirection: 'row',
-    gap: 16,
     paddingHorizontal: spacing.lg,
-    marginBottom: spacing.lg,
-    marginTop: spacing.sm,
   },
-  statCard: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderRadius: radii.lg,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-  },
-  statLabel: { ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs, textAlign: 'center' },
-  statValue: { ...typography.subheading, color: colors.textPrimary, textAlign: 'center' },
-  quoteBlock: {
-    flexDirection: 'row',
-    marginHorizontal: spacing.lg,
-    marginBottom: spacing.xl,
-    backgroundColor: colors.surface,
-    borderRadius: radii.md,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  quoteBorder: { width: 3 },
-  quoteContent: { flex: 1, padding: spacing.md },
-  quoteLabel: {
-    fontSize: 10,
-    fontWeight: '700',
+  stat: { flex: 1 },
+  statDivider: { width: 1, backgroundColor: colors.border, marginHorizontal: spacing.lg },
+  statLabel: {
+    fontFamily: fonts.semibold,
+    fontSize: 11,
     color: colors.textMuted,
+    letterSpacing: 0.6,
     textTransform: 'uppercase',
-    letterSpacing: 0.8,
     marginBottom: 6,
   },
-  quoteText: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    lineHeight: 22,
-    marginBottom: 10,
+  statValue: {
+    fontFamily: fonts.bold,
+    fontSize: 22,
+    color: colors.textPrimary,
+    letterSpacing: -0.5,
   },
-  quoteContext: {
+
+  // Section (rationale + tipping)
+  section: { paddingHorizontal: spacing.lg },
+  sectionLabel: {
+    fontFamily: fonts.semibold,
+    fontSize: 11,
+    color: colors.textMuted,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    marginBottom: spacing.sm,
+  },
+  rationaleText: {
+    fontFamily: fonts.regular,
+    fontSize: 15,
+    color: colors.textSecondary,
+    lineHeight: 24,
+    marginBottom: spacing.sm,
+  },
+  rationaleContext: {
+    fontFamily: fonts.regular,
     fontSize: 13,
     color: colors.textMuted,
     lineHeight: 20,
     fontStyle: 'italic',
+  },
+
+  // Tipping
+  tippingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
     borderTopWidth: 1,
     borderTopColor: colors.border,
-    paddingTop: 8,
   },
-  buttonGroup: { paddingHorizontal: spacing.lg, gap: 12 },
-  saveButton: {
-    borderRadius: radii.md,
-    paddingVertical: 16,
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: colors.teal,
+  tippingLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  tippingDot: { width: 8, height: 8, borderRadius: 4 },
+  tippingRowLabel: { fontFamily: fonts.medium, fontSize: 14, color: colors.textSecondary },
+  tippingRowValue: { fontFamily: fonts.bold, fontSize: 14, color: colors.textPrimary },
+
+  // Actions
+  actions: {
+    paddingHorizontal: spacing.lg,
+    gap: 12,
   },
-  saveButtonSaved: { backgroundColor: colors.teal, borderColor: colors.teal },
-  saveButtonText: { color: colors.teal, fontSize: 16, fontWeight: '700' },
-  saveButtonTextSaved: { color: '#0F0F0F' },
-  checkButton: {
+  btnPrimary: {
     backgroundColor: colors.teal,
     borderRadius: radii.md,
-    paddingVertical: 16,
+    height: 54,
     alignItems: 'center',
-    marginHorizontal: spacing.lg,
-    marginTop: spacing.sm,
-    marginBottom: spacing.lg,
+    justifyContent: 'center',
   },
-  checkButtonText: { color: '#0F0F0F', fontSize: 16, fontWeight: '700' },
+  btnPrimaryDone: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.teal },
+  btnPrimaryText: { fontFamily: fonts.bold, fontSize: 15, color: '#0F0F0F' },
+  btnPrimaryTextDone: { color: colors.teal },
+  btnSecondary: {
+    height: 54,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  btnSecondaryText: { fontFamily: fonts.semibold, fontSize: 15, color: colors.textSecondary },
 
-  // ---- Multi-product styles ----
+  // ── Multi ────────────────────────────────────────────────────────────────
   multiContainer: {
     flexGrow: 1,
     paddingBottom: spacing.xxl,
@@ -333,13 +388,23 @@ const styles = StyleSheet.create({
   },
   multiHeader: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.xl,
     paddingBottom: spacing.lg,
   },
-  multiTitle: { ...typography.title, color: colors.textPrimary, marginBottom: 4 },
-  multiSubtitle: { fontSize: 14, color: colors.textSecondary },
+  multiTitle: {
+    fontFamily: fonts.bold,
+    fontSize: 26,
+    color: colors.textPrimary,
+    letterSpacing: -0.5,
+    marginBottom: 4,
+  },
+  multiSubtitle: {
+    fontFamily: fonts.regular,
+    fontSize: 14,
+    color: colors.textMuted,
+  },
+
+  // Multi card
   multiCard: {
-    flexDirection: 'row',
     marginHorizontal: spacing.lg,
     marginBottom: spacing.md,
     backgroundColor: colors.surface,
@@ -348,85 +413,75 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     overflow: 'hidden',
   },
-  multiCardAccent: { width: 4 },
-  multiCardBody: { flex: 1, padding: spacing.md },
-  multiCardTop: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md },
-  multiCardEmoji: { fontSize: 32, marginRight: 12 },
-  multiCardMeta: { flex: 1 },
-  multiCardLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    marginBottom: 2,
-  },
-  multiCardVerdict: { fontSize: 16, fontWeight: '700' },
-  multiCardStats: {
+  multiCardBar: { height: 3 },
+  multiCardContent: { padding: spacing.md },
+  multiCardTop: {
     flexDirection: 'row',
-    alignItems: 'center',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
     marginBottom: spacing.md,
-    backgroundColor: colors.bg,
-    borderRadius: radii.sm,
-    padding: spacing.sm,
   },
-  multiCardStat: { flex: 1, alignItems: 'center' },
-  multiCardDivider: { width: 1, height: 32, backgroundColor: colors.border },
-  multiCardStatLabel: { ...typography.caption, color: colors.textMuted, marginBottom: 2 },
-  multiCardStatValue: { fontSize: 15, fontWeight: '700', color: colors.textPrimary },
-  // ---- Tipping point styles ----
-  tippingBlock: {
-    marginHorizontal: spacing.lg,
-    marginBottom: spacing.lg,
-    backgroundColor: colors.surface,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.md,
-  },
-  tippingTitle: {
+  multiCardTopLeft: {},
+  multiCardIndex: {
+    fontFamily: fonts.semibold,
     fontSize: 11,
-    fontWeight: '700',
     color: colors.textMuted,
+    letterSpacing: 0.6,
     textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    marginBottom: spacing.sm,
+    marginBottom: 3,
   },
-  tippingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
+  multiCardVerdict: {
+    fontFamily: fonts.bold,
+    fontSize: 17,
+    letterSpacing: -0.3,
   },
-  tippingDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 8,
-  },
-  tippingLabel: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    flex: 1,
-  },
-  tippingValue: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
-  multiRationale: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginBottom: spacing.sm,
+  multiCardPercent: {
+    fontFamily: fonts.bold,
+    fontSize: 28,
+    letterSpacing: -1,
   },
 
-  multiSaveButton: {
-    borderRadius: radii.sm,
-    paddingVertical: 10,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.teal,
+  // Multi stats
+  multiCardStats: {
+    flexDirection: 'row',
+    gap: spacing.lg,
+    marginBottom: spacing.sm,
+    paddingBottom: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
-  multiSaveButtonSaved: { backgroundColor: colors.teal, borderColor: colors.teal },
-  multiSaveButtonText: { color: colors.teal, fontSize: 13, fontWeight: '700' },
-  multiSaveButtonTextSaved: { color: '#0F0F0F' },
+  multiStat: {},
+  multiStatLabel: {
+    fontFamily: fonts.semibold,
+    fontSize: 11,
+    color: colors.textMuted,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    marginBottom: 3,
+  },
+  multiStatValue: {
+    fontFamily: fonts.bold,
+    fontSize: 16,
+    color: colors.textPrimary,
+  },
+
+  multiRationale: {
+    fontFamily: fonts.regular,
+    fontSize: 12,
+    color: colors.textMuted,
+    marginBottom: spacing.md,
+    lineHeight: 18,
+  },
+
+  multiSaveBtn: {
+    height: 38,
+    borderRadius: radii.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  multiSaveBtnDone: { backgroundColor: colors.surface, borderColor: colors.teal },
+  multiSaveBtnText: { fontFamily: fonts.semibold, fontSize: 13, color: colors.textSecondary },
+  multiSaveBtnTextDone: { color: colors.teal },
 });

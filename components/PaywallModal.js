@@ -19,7 +19,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import PressableScale from './PressableScale';
-import { colors, spacing, radii, typography } from '../theme';
+import { colors, fonts, spacing, radii } from '../theme';
 
 const FEATURES = [
   'Unlimited affordability checks',
@@ -106,23 +106,26 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   handle: {
-    width: 40,
+    width: 36,
     height: 4,
     backgroundColor: colors.border,
     borderRadius: 2,
     marginBottom: spacing.lg,
   },
   lockEmoji: {
-    fontSize: 48,
+    fontSize: 40,
     marginBottom: spacing.md,
   },
   headline: {
-    ...typography.heading,
+    fontFamily: fonts.bold,
+    fontSize: 22,
     color: colors.textPrimary,
     marginBottom: spacing.sm,
     textAlign: 'center',
+    letterSpacing: -0.3,
   },
   subtext: {
+    fontFamily: fonts.regular,
     fontSize: 15,
     color: colors.textSecondary,
     textAlign: 'center',
@@ -139,45 +142,51 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   checkmark: {
+    fontFamily: fonts.bold,
     color: colors.teal,
-    fontWeight: '700',
-    fontSize: 16,
+    fontSize: 14,
     marginRight: 10,
     width: 20,
     textAlign: 'center',
   },
   featureText: {
+    fontFamily: fonts.regular,
     fontSize: 15,
     color: colors.textPrimary,
     flex: 1,
   },
   price: {
-    ...typography.price,
+    fontFamily: fonts.bold,
+    fontSize: 36,
     color: colors.textPrimary,
+    letterSpacing: -1,
     marginBottom: 4,
   },
   priceCaption: {
-    ...typography.caption,
-    color: colors.textSecondary,
+    fontFamily: fonts.regular,
+    fontSize: 12,
+    color: colors.textMuted,
     marginBottom: spacing.lg,
   },
   unlockButton: {
     backgroundColor: colors.teal,
     borderRadius: radii.md,
-    paddingVertical: 18,
+    height: 54,
     width: '100%',
     alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: spacing.md,
   },
   unlockText: {
+    fontFamily: fonts.bold,
     color: '#0F0F0F',
     fontSize: 16,
-    fontWeight: '700',
   },
   dismissButton: {
     paddingVertical: 12,
   },
   dismissText: {
+    fontFamily: fonts.regular,
     color: colors.textMuted,
     fontSize: 14,
   },

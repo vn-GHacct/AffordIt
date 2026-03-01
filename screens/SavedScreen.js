@@ -20,7 +20,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import SavedCard from '../components/SavedCard';
 import { getCalculations, deleteCalculation } from '../utils/storage';
-import { colors, spacing, radii, typography } from '../theme';
+import { colors, fonts, spacing, radii } from '../theme';
 
 export default function SavedScreen({ navigation }) {
   const [calculations, setCalculations] = useState([]);
@@ -111,22 +111,25 @@ const styles = StyleSheet.create({
     width: 80,
   },
   backText: {
-    color: colors.teal,
-    fontSize: 15,
-    fontWeight: '600',
+    fontFamily: fonts.medium,
+    color: colors.textMuted,
+    fontSize: 14,
   },
   backPlaceholder: {
     width: 80,
   },
   title: {
-    ...typography.subheading,
+    fontFamily: fonts.bold,
+    fontSize: 18,
     color: colors.textPrimary,
+    letterSpacing: -0.3,
   },
   list: {
     paddingTop: spacing.md,
     paddingBottom: spacing.xxl,
   },
   swipeHint: {
+    fontFamily: fonts.regular,
     textAlign: 'center',
     color: colors.textMuted,
     fontSize: 12,
@@ -151,18 +154,20 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   emptyEmoji: {
-    fontSize: 48,
+    fontSize: 40,
     marginBottom: spacing.md,
   },
   emptyTitle: {
-    ...typography.subheading,
+    fontFamily: fonts.bold,
+    fontSize: 17,
     color: colors.textPrimary,
     marginBottom: spacing.sm,
     textAlign: 'center',
   },
   emptySubtext: {
+    fontFamily: fonts.regular,
     fontSize: 14,
-    color: colors.textSecondary,
+    color: colors.textMuted,
     textAlign: 'center',
     lineHeight: 21,
   },
